@@ -58,8 +58,15 @@ export default function App() {
           <div className="advisory-layout">
             <AdvisoryForm onSubmit={handleSubmit} loading={loading} />
             <div className="advisory-output">
-              {error && <p className="error">{error}</p>}
-              {!advisory && !error && (
+              {error && <p className="error" role="alert">{error}</p>}
+              {loading && (
+                <div className="card placeholder" aria-live="polite">
+                  <p className="muted">
+                    Fetching live weather and satellite data, then running the advisory model...
+                  </p>
+                </div>
+              )}
+              {!loading && !advisory && !error && (
                 <div className="card placeholder">
                   <p className="muted">
                     Fill in your farm's soil test and location, then request an advisory to see
@@ -68,7 +75,12 @@ export default function App() {
                   </p>
                 </div>
               )}
-              <AdvisoryResults data={advisory} />
+              {!loading && advisory && (
+                <button type="button" className="reset-link" onClick={() => setAdvisory(null)}>
+                  Clear results
+                </button>
+              )}
+              {!loading && <AdvisoryResults data={advisory} />}
             </div>
           </div>
         )}

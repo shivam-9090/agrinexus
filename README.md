@@ -57,7 +57,7 @@ python -m app.ml.train_crop_model   # trains the crop model (few seconds, CPU on
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs: http://127.0.0.1:8000/docs
+API docs: `http://127.0.0.1:8000/docs`
 
 ### Frontend
 
@@ -68,7 +68,7 @@ cp .env.example .env   # point VITE_API_URL at your backend
 npm run dev
 ```
 
-App: http://127.0.0.1:5173
+App: `http://127.0.0.1:5173`
 
 ### Docker (both services)
 
@@ -79,8 +79,18 @@ docker compose up --build
 ### Tests
 
 ```bash
+# backend: 44 tests (pytest + respx mocking the external APIs)
 cd backend && source .venv/bin/activate && pytest
+
+# frontend: component/unit tests (Vitest + Testing Library)
+cd frontend && npm test
 ```
+
+There's also a manual browser smoke test (`frontend/e2e/smoke.mjs`) that
+drives a real Chrome instance through all three tabs against the live dev
+servers and screenshots each state — see the comment at the top of that file
+for how to run it. It's not part of `npm test` since it needs a running
+backend/frontend and a local Chrome install.
 
 ## API overview
 
@@ -98,7 +108,7 @@ also auto-documented at `/docs`.
 
 ## Repository layout
 
-```
+```text
 backend/    FastAPI app, ML training script, services, tests
 frontend/   React (Vite) dashboard
 docs/       Architecture, federation schema, demo script

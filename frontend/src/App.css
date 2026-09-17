@@ -73,7 +73,9 @@ body {
   margin-bottom: 20px;
 }
 
-.card h2 { margin-top: 0; }
+.card h2 { margin-top: 28px; }
+.card h2:first-child { margin-top: 0; }
+.card h3 { margin-top: 20px; }
 
 .advisory-layout {
   display: grid;
@@ -86,7 +88,7 @@ body {
   .advisory-layout { grid-template-columns: 1fr; }
 }
 
-.form-card .field {
+.field {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -94,20 +96,25 @@ body {
   font-size: 0.9rem;
 }
 
-.form-card .checkbox-field {
+.checkbox-field {
   flex-direction: row;
   align-items: center;
   gap: 8px;
 }
 
-.form-card input[type="text"],
-.form-card input[type="number"],
-.form-card input {
+.field input[type="text"],
+.field input[type="number"],
+.field input {
   background: #0e150e;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   color: var(--text);
   padding: 8px 10px;
+}
+
+.field input[type="file"] {
+  color: var(--text);
+  font-size: 0.85rem;
 }
 
 .grid-2 {
@@ -118,6 +125,15 @@ body {
 
 .search-row { display: flex; gap: 8px; }
 .search-row input { flex: 1; }
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.78rem;
+}
+
+.form-card input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
 
 .suggestions {
   list-style: none;
@@ -163,6 +179,19 @@ button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .results .span-2 { grid-column: 1 / -1; }
+
+.cooperation-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.cooperation-layout .span-2 { grid-column: 1 / -1; }
+
+@media (max-width: 860px) {
+  .cooperation-layout { grid-template-columns: 1fr; }
+}
 
 .score-ring {
   --score: 0;
@@ -220,6 +249,21 @@ button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
   white-space: nowrap;
 }
 
+.button-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.button-row button:not(.primary) {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
 .leaf-preview {
   display: block;
   max-width: 260px;
@@ -261,3 +305,13 @@ button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .placeholder { text-align: center; }
+
+.reset-link {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0 0 12px;
+  font-size: 0.85rem;
+}
