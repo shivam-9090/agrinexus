@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgriNexus BRICS Federation Insight",
+  "description": "Open, minimal schema for a regional node to publish AGGREGATED, anonymized regenerative-agriculture signals to the cooperation network. No individual farmer records ever cross this boundary -- only per-region, per-crop aggregates.",
+  "type": "object",
+  "required": ["node_id", "country", "region", "crop", "avg_soil_health_score", "dominant_regenerative_practice", "sample_size", "submitted_at"],
+  "properties": {
+    "node_id": { "type": "string", "description": "Stable identifier for the reporting regional node, e.g. 'in-mh-01'" },
+    "country": { "type": "string" },
+    "region": { "type": "string", "description": "State/province/oblast level, never farm-level" },
+    "crop": { "type": "string" },
+    "avg_soil_health_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "dominant_regenerative_practice": { "type": "string", "description": "Most frequently recommended practice across the aggregated sample" },
+    "sample_size": { "type": "integer", "minimum": 1, "description": "Number of individual advisories aggregated into this record" },
+    "submitted_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
