@@ -128,8 +128,9 @@ docs/       Architecture, federation schema, demo script
   labeled dataset or GPU was available in this build window. Upgrade path to
   a fine-tuned MobileNetV2/EfficientNet model is documented in
   `disease_detector.py` and sits behind the same function signature.
-- The federation store is **in-memory** for the demo; production would use a
-  shared database with per-node access control.
+- The federation store is **SQLite** (one file, persisted via a Docker
+  volume) — it survives restarts but has no per-node access control;
+  production would move to Postgres with row-level tenancy.
 
 ## License
 

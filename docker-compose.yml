@@ -3,6 +3,8 @@ services:
     build: ./backend
     ports:
       - "8010:8000"
+    volumes:
+      - federation-db:/app/app/data/federation
 
   frontend:
     build:
@@ -13,3 +15,6 @@ services:
       - "3000:80"
     depends_on:
       - backend
+
+volumes:
+  federation-db:

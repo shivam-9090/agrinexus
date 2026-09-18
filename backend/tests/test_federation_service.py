@@ -1,10 +1,13 @@
+import tempfile
+from pathlib import Path
+
 from app.services import federation
 
 
 def setup_function(_):
-    # federation module holds process-global in-memory state; reset between tests
-    federation._nodes.clear()
-    federation._insights.clear()
+    # federation module holds a process-global SQLite connection; give each
+    # test a fresh in-memory database for isolation.
+    federation.reset_for_tests()
 
 
 def test_register_node_and_list():
@@ -48,3 +51,23 @@ def test_network_stats_counts_unique_countries():
     assert stats["registered_nodes"] == 3
     assert stats["participating_countries"] == ["Brazil", "India"]
     assert stats["total_insights_shared"] == 1
+
+
+def test_data_survives_reconnect_to_same_file():
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = str(Path(tmp) / "federation.db")
+        federation.reset_for_tests(db_path)
+        federation.register_node(
+            federation.FederationNode(node_id="cn-hn-01", country="China", region="Henan")
+        )
+        federation.submit_insight("cn-hn-01", "China", "Henan", "sorghum", 85.0, "contour bunding", 200)
+
+        # simulate a process restart: drop the in-memory connection object,
+        # then reopen the same on-disk file and confirm the data is still there
+        federation._connection.close()
+        federation._connection = None
+
+        assert len(federation.list_nodes()) == 1
+        stats = federation.network_stats()
+        assert stats["registered_nodes"] == 1
+        assert stats["total_insights_shared"] == 1

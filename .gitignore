@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 backend/app/data/crop_dataset.csv
 backend/app/data/crop_model.joblib
+backend/app/data/federation/
 
 # Node / frontend
 frontend/node_modules/

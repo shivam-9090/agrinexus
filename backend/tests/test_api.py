@@ -4,9 +4,15 @@ from httpx import Response
 
 from app.config import get_settings
 from app.main import app
+from app.services import federation
 
 client = TestClient(app)
 settings = get_settings()
+
+
+def setup_module(_):
+    # isolate the federation tests below from any other test module / dev DB
+    federation.reset_for_tests()
 
 
 def test_health():

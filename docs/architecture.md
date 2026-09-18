@@ -9,7 +9,7 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
 
 ## Solution shape
 
-```
+```text
                          ┌─────────────────────────┐
                          │        Frontend          │
                          │  React (Vite) dashboard  │
@@ -76,5 +76,9 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
 
 - Crop model is trained on a synthetic seed dataset, not field records.
 - Disease detection is a heuristic, not a trained classifier.
-- Federation store is in-memory (resets on backend restart) — a production
-  version would use a shared database with per-node row-level access control.
+- Federation store is SQLite (a single file at
+  `backend/app/data/federation/federation.db`, persisted via a Docker
+  volume) — this survives restarts, unlike the original in-memory version,
+  but it's still one file with no per-node access control. A production
+  version would move to Postgres with row-level tenancy so one node can't
+  overwrite another's data.
