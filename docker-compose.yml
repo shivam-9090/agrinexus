@@ -2,13 +2,13 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "8010:8000"
 
   frontend:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://localhost:8000/api/v1
+        VITE_API_URL: http://localhost:8010/api/v1
     ports:
       - "3000:80"
     depends_on:

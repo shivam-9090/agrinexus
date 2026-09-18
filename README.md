@@ -76,6 +76,10 @@ App: `http://127.0.0.1:5173`
 docker compose up --build
 ```
 
+Frontend: `http://localhost:3000` &middot; Backend: `http://localhost:8010`
+(mapped to 8010 on the host to avoid clashing with anything else already
+using 8000 — the container itself still listens on 8000 internally).
+
 ### Tests
 
 ```bash
