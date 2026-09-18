@@ -24,8 +24,9 @@ climate-resilient farming.
    paired with an explainable regenerative-practice engine (legume rotation,
    cover cropping, compost/no-till, lime/gypsum correction, water
    conservation).
-3. **A crop leaf stress/disease diagnostic tool** (photo upload → instant
-   heuristic diagnosis + recommended action).
+3. **A crop leaf disease diagnostic tool** — photo upload → a trained
+   MobileNetV2 classifier (38 diseases across 14 crops, PlantVillage-based)
+   with an explainable CV-heuristic fallback if the model is unavailable.
 4. **A BRICS cooperation / federation layer** — the actual differentiator:
    an open schema and API letting regional nodes across BRICS countries
    share aggregated, anonymized soil-health and best-practice signals,
@@ -38,11 +39,16 @@ for a 3-minute walkthrough.
 
 ## Stack
 
-- **Backend**: FastAPI (Python 3.12), scikit-learn, OpenCV, httpx
+- **Backend**: FastAPI (Python 3.12), scikit-learn, OpenCV,
+  transformers/torch (CPU-only), httpx
 - **Frontend**: React + Vite, Recharts
 - **Data**: Open-Meteo (weather), NASA POWER (satellite/reanalysis
-  agro-climatology) — both free and keyless
-- No GPU or heavy model training required; the crop model trains in seconds
+  agro-climatology) — both free and keyless; a real published crop
+  recommendation dataset (see [`backend/app/ml/real_data/SOURCE.md`](backend/app/ml/real_data/SOURCE.md));
+  a public pretrained plant-disease classifier from Hugging Face
+- No GPU or model training on our side required; the crop model trains in
+  seconds on CPU, and the disease classifier is a pretrained checkpoint we
+  run for inference, not something we trained ourselves
   on CPU.
 
 ## Running locally
@@ -83,18 +89,25 @@ using 8000 — the container itself still listens on 8000 internally).
 ### Tests
 
 ```bash
-# backend: 44 tests (pytest + respx mocking the external APIs)
+# backend: 79 tests (pytest + respx mocking the external APIs; the CNN
+# disease classifier is tested via dependency injection, no network/model
+# download needed)
 cd backend && source .venv/bin/activate && pytest
 
 # frontend: component/unit tests (Vitest + Testing Library)
 cd frontend && npm test
 ```
 
-There's also a manual browser smoke test (`frontend/e2e/smoke.mjs`) that
-drives a real Chrome instance through all three tabs against the live dev
-servers and screenshots each state — see the comment at the top of that file
-for how to run it. It's not part of `npm test` since it needs a running
-backend/frontend and a local Chrome install.
+Two manual, network-dependent checks aren't part of the above (by design,
+so the main suite stays fast and deterministic):
+
+- `frontend/e2e/smoke.mjs` — drives a real Chrome instance through all
+  three tabs against the live dev servers and screenshots each state.
+- `backend/scripts/verify_disease_model.py` — downloads the real disease
+  classifier and a real CC-licensed photo of tomato late blight, and checks
+  the model actually identifies it. Run it (from `backend/`, venv active)
+  after touching `disease_model.py` to sanity-check the real model, not
+  just its mocked tests.
 
 ## API overview
 
@@ -130,14 +143,19 @@ docs/       Architecture, federation schema, demo script
 
 ## Roadmap / known limitations (stated honestly, not hidden)
 
-- The crop recommendation model is trained on a **synthetic seed dataset**
-  built from published agronomic ranges, not field records — see
-  `backend/app/ml/generate_dataset.py`. Swapping in a real regional dataset
-  (ideally sourced through the federation API) is a drop-in change.
-- Disease detection is a **CV heuristic (v1)**, not a trained CNN — no
-  labeled dataset or GPU was available in this build window. Upgrade path to
-  a fine-tuned MobileNetV2/EfficientNet model is documented in
-  `disease_detector.py` and sits behind the same function signature.
+- The crop recommendation model trains on a **real, published dataset**
+  (Kaggle "Crop Recommendation Dataset", 2,200 rows, 22 crops — see
+  `backend/app/ml/real_data/SOURCE.md` for provenance and a license
+  caveat) — but it's a generic dataset, not regional data for the specific
+  BRICS geographies this project targets. The synthetic generator
+  (`generate_dataset.py`) remains as a documented automatic fallback if
+  the real CSV is ever missing.
+- Disease detection uses a **real trained MobileNetV2 classifier**
+  (38 diseases, 14 crops, fine-tuned on PlantVillage — see
+  `docs/architecture.md` for how it was verified, including a real CC-licensed
+  test photo) with the original OpenCV heuristic (`disease_detector.py`) as
+  an automatic fallback if the model can't load. It works best on
+  close-up single-leaf photos, not arbitrary field framing — the UI says so.
 - The federation store is **SQLite** (one file, persisted via a Docker
   volume) — it survives restarts but has no per-node access control;
   production would move to Postgres with row-level tenancy.

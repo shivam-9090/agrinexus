@@ -11,7 +11,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
+ENV HF_HOME=/app/.cache/huggingface
+
 RUN python -m app.ml.train_crop_model
+RUN python -m app.ml.prefetch_disease_model
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
