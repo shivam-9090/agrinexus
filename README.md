@@ -32,6 +32,14 @@ climate-resilient farming.
    share aggregated, anonymized soil-health and best-practice signals,
    turning this from a single-country app into shared digital public-good
    infrastructure.
+5. **A multi-language UI** — English, हिन्दी, Português, Русский and 中文
+   (the most-used BRICS languages; South Africa is commonly served in
+   English alongside its 11 other official languages, so it isn't broken
+   out separately). Scope, stated honestly: this localizes UI chrome
+   (labels, buttons, validation messages) — it does not localize content
+   the backend generates dynamically (crop names, advisory rationale,
+   regenerative-practice text), which would need server-side i18n or a
+   translation API. See `frontend/src/i18n/translations.js`.
 
 See [`docs/architecture.md`](docs/architecture.md) for the full design
 rationale and stated limitations, and [`docs/demo_script.md`](docs/demo_script.md)
@@ -94,7 +102,8 @@ using 8000 — the container itself still listens on 8000 internally).
 # download needed)
 cd backend && source .venv/bin/activate && pytest
 
-# frontend: component/unit tests (Vitest + Testing Library)
+# frontend: 46 tests (Vitest + Testing Library), including a translation
+# completeness check across all 5 languages
 cd frontend && npm test
 ```
 
@@ -159,6 +168,10 @@ docs/       Architecture, federation schema, demo script
 - The federation store is **SQLite** (one file, persisted via a Docker
   volume) — it survives restarts but has no per-node access control;
   production would move to Postgres with row-level tenancy.
+- The **multi-language UI** covers static labels/buttons/validation text
+  in 5 languages, but backend-generated content (crop names, advisory
+  rationale, regenerative-practice descriptions) stays in English — that
+  would need server-side i18n or a translation API to close.
 
 ## License
 

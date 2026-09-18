@@ -30,7 +30,13 @@
    this is the digital-public-good / cross-border cooperation piece the
    brief explicitly asks for.
 
-6. **Close (20s)** — Roadmap: real BRICS-regional training data via the
+6. **Language switch (15s)** — Use the language picker in the header to
+   switch to हिन्दी, Русский or 中文 and show the whole UI (labels, buttons,
+   validation messages) relabel instantly — this is BRICS farmers actually
+   being able to use the tool in their own language, not just an English
+   demo with a BRICS logo on it.
+
+7. **Close (20s)** — Roadmap: real BRICS-regional training data via the
    federation API (current crop model is real but generically-sourced),
-   multi-language UI for BRICS farmers, SMS/WhatsApp delivery for
-   low-connectivity areas.
+   localizing backend-generated content (crop names, advisory rationale) to
+   match the UI, SMS/WhatsApp delivery for low-connectivity areas.

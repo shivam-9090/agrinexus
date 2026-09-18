@@ -107,6 +107,21 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   single-country tool into shared digital public-good infrastructure, which
   is explicitly what the AgriN brief asks for.
 
+- **Multi-language UI**: a small custom React context (`frontend/src/i18n/`)
+  rather than a library like `react-i18next` — five languages and a flat
+  `t(key, vars)` lookup with `{placeholder}` interpolation didn't justify
+  the dependency. English, हिन्दी, Português, Русский, 中文 — the most-used
+  BRICS languages (South Africa is commonly served in English). The
+  selected language persists in `localStorage` and is verified for
+  completeness by a test that checks every language has exactly the same
+  key set as English with no empty values, plus a test that every
+  `{placeholder}` used in an English string also appears in every other
+  language's string for that key — a translation with a missing or
+  mismatched interpolation variable fails CI instead of shipping broken.
+  Scope: this localizes UI chrome only, not backend-generated content
+  (crop names, advisory rationale, regenerative-practice text) — see
+  Known limitations below.
+
 ## Known limitations (stated up front for judges)
 
 - Crop model is trained on a real published dataset, but a generic Indian
@@ -121,3 +136,9 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   but it's still one file with no per-node access control. A production
   version would move to Postgres with row-level tenancy so one node can't
   overwrite another's data.
+- The multi-language UI covers static chrome only (labels, buttons,
+  validation text) in 5 languages. Content the backend generates
+  dynamically — crop names, advisory rationale, regenerative-practice
+  descriptions, weather/climate source strings — stays in English; closing
+  that gap needs server-side i18n or a translation API, not just more
+  frontend strings.
