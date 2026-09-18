@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +9,7 @@ from app.models.schemas import AdvisoryRequest, AdvisoryResponse
 from app.services import climate_service, crop_recommender, regenerative_engine, weather_service
 
 router = APIRouter(prefix="/advisory", tags=["advisory"])
+logger = logging.getLogger("app.advisory")
 
 
 @router.post("", response_model=AdvisoryResponse)
@@ -16,14 +18,24 @@ async def get_advisory(payload: AdvisoryRequest) -> AdvisoryResponse:
         weather = await weather_service.get_weather_forecast(
             payload.location.latitude, payload.location.longitude
         )
-    except Exception as exc:  # pragma: no cover - network failure path
+    except Exception as exc:
+        logger.warning(
+            "weather_provider_failed",
+            extra={"latitude": payload.location.latitude, "longitude": payload.location.longitude},
+            exc_info=exc,
+        )
         raise HTTPException(status_code=502, detail=f"Weather provider error: {exc}") from exc
 
     try:
         climate = await climate_service.get_climate_snapshot(
             payload.location.latitude, payload.location.longitude
         )
-    except Exception as exc:  # pragma: no cover - network failure path
+    except Exception as exc:
+        logger.warning(
+            "climate_provider_failed",
+            extra={"latitude": payload.location.latitude, "longitude": payload.location.longitude},
+            exc_info=exc,
+        )
         raise HTTPException(status_code=502, detail=f"Climate provider error: {exc}") from exc
 
     avg_temp = climate.avg_temperature_c if climate.avg_temperature_c is not None else (

@@ -12,11 +12,19 @@ import httpx
 
 from app.config import get_settings
 from app.models.schemas import ClimateSnapshot
+from app.services.cache import TTLCache, round_coord
 
 PARAMETERS = "ALLSKY_SFC_SW_DWN,PRECTOTCORR,T2M,GWETROOT"
 
+# The underlying window is a 30-day trailing average that only shifts by one
+# day at a time, so an hourly cache loses essentially no accuracy while
+# cutting repeat-request load on the free NASA POWER API substantially.
+CLIMATE_TTL_SECONDS = 60 * 60
 
-async def get_climate_snapshot(latitude: float, longitude: float, lookback_days: int = 30) -> ClimateSnapshot:
+_cache = TTLCache()
+
+
+async def _fetch_climate_snapshot(latitude: float, longitude: float, lookback_days: int) -> ClimateSnapshot:
     settings = get_settings()
     end = date.today() - timedelta(days=4)  # NASA POWER has a short latency
     start = end - timedelta(days=lookback_days)
@@ -52,3 +60,17 @@ async def get_climate_snapshot(latitude: float, longitude: float, lookback_days:
         soil_moisture_proxy_pct=round(soil_moisture * 100, 1) if soil_moisture is not None else None,
         period=f"{start.isoformat()} to {end.isoformat()}",
     )
+
+
+async def get_climate_snapshot(latitude: float, longitude: float, lookback_days: int = 30) -> ClimateSnapshot:
+    key = f"climate:{round_coord(latitude)}:{round_coord(longitude)}:{lookback_days}"
+    return await _cache.get_or_set(
+        key,
+        CLIMATE_TTL_SECONDS,
+        lambda: _fetch_climate_snapshot(latitude, longitude, lookback_days),
+    )
+
+
+def reset_cache() -> None:
+    """Test-only: drop all cached entries so mocks take effect immediately."""
+    _cache.clear()

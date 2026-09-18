@@ -64,6 +64,21 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   on images collected through the federation network — swapping in a real
   model only touches `disease_detector.py`, not the API contract.
 
+- **Caching**: weather/climate/geocode lookups are cached in-process per
+  (rounded) coordinate (`backend/app/services/cache.py`) — 30 min for
+  weather, 1 hour for the NASA POWER 30-day trailing average, 24 hours for
+  geocoding. This isn't premature optimization: Open-Meteo and NASA POWER
+  are free and keyless, meaning no SLA and a real risk of rate limiting if
+  a judge re-submits the same location a few times during a demo. A failed
+  fetch is never cached, so a transient upstream error doesn't get "stuck."
+
+- **Structured logging**: JSON-lines logging (`backend/app/logging_config.py`)
+  with one line per request (method, path, status, duration, a UUID request
+  ID also echoed back as `X-Request-ID`) plus warning-level logs on
+  upstream provider failures — this is the "monitoring and observability"
+  slice of the brief, kept to stdlib `logging` rather than pulling in an
+  APM dependency for a hackathon deployment.
+
 - **Federation layer (the BRICS "Cooperation" hook)**: the actual
   differentiator for this theme. Regional nodes (one per BRICS country in the
   demo) register and publish only aggregated, anonymized soil-health and

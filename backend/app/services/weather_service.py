@@ -5,9 +5,15 @@ import httpx
 
 from app.config import get_settings
 from app.models.schemas import WeatherSnapshot
+from app.services.cache import TTLCache, round_coord
+
+WEATHER_TTL_SECONDS = 30 * 60  # forecasts don't meaningfully change faster than this
+GEOCODE_TTL_SECONDS = 24 * 60 * 60  # place -> coordinates is effectively static
+
+_cache = TTLCache()
 
 
-async def get_weather_forecast(latitude: float, longitude: float) -> WeatherSnapshot:
+async def _fetch_weather_forecast(latitude: float, longitude: float) -> WeatherSnapshot:
     settings = get_settings()
     params = {
         "latitude": latitude,
@@ -35,7 +41,14 @@ async def get_weather_forecast(latitude: float, longitude: float) -> WeatherSnap
     )
 
 
-async def geocode_place(query: str) -> list[dict]:
+async def get_weather_forecast(latitude: float, longitude: float) -> WeatherSnapshot:
+    key = f"weather:{round_coord(latitude)}:{round_coord(longitude)}"
+    return await _cache.get_or_set(
+        key, WEATHER_TTL_SECONDS, lambda: _fetch_weather_forecast(latitude, longitude)
+    )
+
+
+async def _fetch_geocode(query: str) -> list[dict]:
     settings = get_settings()
     params = {"name": query, "count": 5, "language": "en", "format": "json"}
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
@@ -43,3 +56,13 @@ async def geocode_place(query: str) -> list[dict]:
         resp.raise_for_status()
         data = resp.json()
     return data.get("results", [])
+
+
+async def geocode_place(query: str) -> list[dict]:
+    key = f"geocode:{query.strip().lower()}"
+    return await _cache.get_or_set(key, GEOCODE_TTL_SECONDS, lambda: _fetch_geocode(query))
+
+
+def reset_cache() -> None:
+    """Test-only: drop all cached entries so mocks take effect immediately."""
+    _cache.clear()

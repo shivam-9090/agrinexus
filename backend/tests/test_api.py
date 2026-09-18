@@ -4,7 +4,7 @@ from httpx import Response
 
 from app.config import get_settings
 from app.main import app
-from app.services import federation
+from app.services import climate_service, federation, weather_service
 
 client = TestClient(app)
 settings = get_settings()
@@ -15,10 +15,23 @@ def setup_module(_):
     federation.reset_for_tests()
 
 
+def setup_function(_):
+    # several tests below reuse the same coordinates with different mocked
+    # responses; without resetting, a later test would see an earlier
+    # test's cached weather/climate result instead of its own respx mock
+    weather_service.reset_cache()
+    climate_service.reset_cache()
+
+
 def test_health():
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
+
+
+def test_health_response_has_request_id_header():
+    resp = client.get("/health")
+    assert "x-request-id" in {k.lower() for k in resp.headers}
 
 
 @respx.mock

@@ -4,7 +4,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.logging_config import configure_logging
+from app.middleware import RequestLoggingMiddleware
 from app.routers import advisory, disease, federation
+
+configure_logging()
 
 settings = get_settings()
 
@@ -26,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(advisory.router, prefix=settings.api_v1_prefix)
 app.include_router(disease.router, prefix=settings.api_v1_prefix)

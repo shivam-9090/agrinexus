@@ -110,6 +110,16 @@ backend/frontend and a local Chrome install.
 Full request/response schemas are in `backend/app/models/schemas.py` and are
 also auto-documented at `/docs`.
 
+## Configuration
+
+| Variable | Where | Default | Purpose |
+|---|---|---|---|
+| `VITE_API_URL` | frontend | `http://127.0.0.1:8123/api/v1` | Base URL the frontend calls |
+| `LOG_LEVEL` | backend | `INFO` | stdlib logging level (`DEBUG`, `INFO`, `WARNING`, ...) |
+
+No API keys are required — Open-Meteo and NASA POWER are both free and
+keyless.
+
 ## Repository layout
 
 ```text
