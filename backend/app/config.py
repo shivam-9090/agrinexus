@@ -17,6 +17,16 @@ class Settings(BaseSettings):
 
     http_timeout_seconds: float = 10.0
 
+    rate_limit_enabled: bool = True
+    rate_limit_requests: int = 120
+    rate_limit_window_seconds: float = 60.0
+
+    # Shared secret required on POST /federation/* when set. Unset by
+    # default so local dev/demo works with zero setup; a real deployment
+    # should set this (and, ideally, move to per-node credentials -- see
+    # docs/architecture.md).
+    federation_api_key: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

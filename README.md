@@ -97,12 +97,12 @@ using 8000 — the container itself still listens on 8000 internally).
 ### Tests
 
 ```bash
-# backend: 79 tests (pytest + respx mocking the external APIs; the CNN
+# backend: 93 tests (pytest + respx mocking the external APIs; the CNN
 # disease classifier is tested via dependency injection, no network/model
 # download needed)
 cd backend && source .venv/bin/activate && pytest
 
-# frontend: 46 tests (Vitest + Testing Library), including a translation
+# frontend: 48 tests (Vitest + Testing Library), including a translation
 # completeness check across all 5 languages
 cd frontend && npm test
 ```
@@ -138,9 +138,15 @@ also auto-documented at `/docs`.
 |---|---|---|---|
 | `VITE_API_URL` | frontend | `http://127.0.0.1:8123/api/v1` | Base URL the frontend calls |
 | `LOG_LEVEL` | backend | `INFO` | stdlib logging level (`DEBUG`, `INFO`, `WARNING`, ...) |
+| `RATE_LIMIT_ENABLED` | backend | `true` | Toggle the per-IP rate limiter |
+| `RATE_LIMIT_REQUESTS` | backend | `120` | Max requests per client IP per window |
+| `RATE_LIMIT_WINDOW_SECONDS` | backend | `60` | Rate limit window, in seconds |
+| `FEDERATION_API_KEY` | backend | *(unset)* | If set, requires a matching `X-API-Key` header on `POST /federation/*`. Unset = open writes (demo mode). |
+| `VITE_FEDERATION_API_KEY` | frontend | *(unset)* | Set to the same value as `FEDERATION_API_KEY` so the app's own federation forms keep working when auth is enabled |
 
-No API keys are required — Open-Meteo and NASA POWER are both free and
-keyless.
+No API keys are required to run this — Open-Meteo and NASA POWER (the
+external data sources) are both free and keyless. `FEDERATION_API_KEY` is
+an *optional* app-level control you can turn on, not a required credential.
 
 ## Repository layout
 
@@ -172,6 +178,14 @@ docs/       Architecture, federation schema, demo script
   in 5 languages, but backend-generated content (crop names, advisory
   rationale, regenerative-practice descriptions) stays in English — that
   would need server-side i18n or a translation API to close.
+- **Federation writes are gated by one shared secret**, not per-node
+  credentials (`FEDERATION_API_KEY`, off by default). It stops drive-by
+  abuse of a public URL; it doesn't give per-node attribution or
+  revocation. A production version would issue each participating node
+  its own key.
+- **Rate limiting is in-memory and per-process** (fine for the single
+  backend container this ships as; a multi-instance deployment would need
+  it backed by Redis instead, same as the response cache).
 
 ## License
 

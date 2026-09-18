@@ -99,6 +99,31 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   slice of the brief, kept to stdlib `logging` rather than pulling in an
   APM dependency for a hackathon deployment.
 
+- **Rate limiting**: a per-client-IP sliding-window limiter
+  (`backend/app/services/rate_limiter.py`, wired in as ASGI middleware in
+  `middleware.py`) protects the backend itself, separately from the
+  response cache protecting the upstream weather/climate APIs. Default
+  120 requests/60s per IP, `/health` exempt so uptime checks aren't
+  throttled, 429 responses carry `Retry-After` and are still logged (the
+  rate limiter sits inside the request-logging middleware on purpose, so
+  throttled requests show up in the logs instead of vanishing silently).
+  Single-instance, in-memory — same caveat as the cache: a
+  multi-instance deployment would need this backed by Redis instead.
+  Configurable via `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` /
+  `RATE_LIMIT_ENABLED`.
+
+- **Federation write auth**: `POST /federation/nodes` and
+  `POST /federation/insights` are gated behind an optional shared-secret
+  `X-API-Key` header (`FEDERATION_API_KEY` env var; unset by default so
+  local dev/demo needs zero setup). `GET` endpoints stay public — the
+  cooperation-network view and stats are meant to be readable by anyone,
+  only writes need gating. This is explicitly a shared secret, not
+  per-node credentials: every writer uses the same key, so it stops
+  drive-by abuse of a public URL but doesn't let you attribute or revoke
+  one bad actor without rotating the key for everyone. A production
+  version would issue each participating node its own credential — see
+  Known limitations.
+
 - **Federation layer (the BRICS "Cooperation" hook)**: the actual
   differentiator for this theme. Regional nodes (one per BRICS country in the
   demo) register and publish only aggregated, anonymized soil-health and
@@ -142,3 +167,14 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   descriptions, weather/climate source strings — stays in English; closing
   that gap needs server-side i18n or a translation API, not just more
   frontend strings.
+- Federation write auth is a **shared secret**, not per-node credentials —
+  every writer uses the same `FEDERATION_API_KEY`. It stops a random
+  stranger from spamming a public URL; it doesn't give you per-node
+  attribution, revocation, or the ability to trust that "India's node" data
+  actually came from India's node rather than someone with the shared key.
+  A production version would issue each node its own credential (API key
+  per row in the `nodes` table, or proper OAuth/mTLS between nodes).
+- Rate limiting is **in-memory and per-process** — correct for the single
+  backend container this ships as, but a multi-instance/load-balanced
+  deployment would need it backed by something shared (Redis) or each
+  instance's limit would effectively multiply by the instance count.

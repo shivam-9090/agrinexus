@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { diagnoseDisease, fetchAdvisory, geocodePlace } from "./api";
+import { diagnoseDisease, fetchAdvisory, geocodePlace, registerFederationNode } from "./api";
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  vi.resetModules();
 });
 
 describe("fetchAdvisory", () => {
@@ -64,6 +66,33 @@ describe("geocodePlace", () => {
 
     const [url] = fetchMock.mock.calls[0];
     expect(url).toContain(encodeURIComponent("São Paulo, Brazil"));
+  });
+});
+
+describe("registerFederationNode", () => {
+  it("does not send an X-API-Key header when VITE_FEDERATION_API_KEY is unset", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await registerFederationNode({ node_id: "n1", country: "India", region: "Bihar" });
+
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toContain("/federation/nodes");
+    expect(options.headers["X-API-Key"]).toBeUndefined();
+  });
+
+  it("sends an X-API-Key header when VITE_FEDERATION_API_KEY is set", async () => {
+    vi.stubEnv("VITE_FEDERATION_API_KEY", "demo-secret");
+    vi.resetModules();
+    const { registerFederationNode: registerWithKey } = await import("./api");
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await registerWithKey({ node_id: "n1", country: "India", region: "Bihar" });
+
+    const [, options] = fetchMock.mock.calls[0];
+    expect(options.headers["X-API-Key"]).toBe("demo-secret");
   });
 });
 
