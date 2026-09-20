@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { geocodePlace } from "../api";
+import { MapPinIcon, SearchIcon, SproutIcon, LoaderIcon } from "./Icons";
 import { useLanguage } from "../i18n/LanguageContext";
 
 const DEFAULTS = {
@@ -146,33 +147,45 @@ export default function AdvisoryForm({ onSubmit, loading }) {
 
   return (
     <form className="card form-card" onSubmit={submit} noValidate>
-      <h2>{t("advisoryForm.heading")}</h2>
+      <div className="card-header">
+        <h2>
+          <SproutIcon width="20" height="20" />
+          {t("advisoryForm.heading")}
+        </h2>
+        <p className="card-desc">
+          Geocode your farm coordinates and input laboratory soil test parameters.
+        </p>
+      </div>
 
-      <label className="field">
+      <label className="field" style={{ position: "relative" }}>
         <span>{t("advisoryForm.searchLocation")}</span>
-        <div className="search-row">
+        <div className="search-input-group">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("advisoryForm.searchPlaceholder")}
           />
-          <button type="button" onClick={handleSearch} disabled={searching}>
+          <button type="button" className="btn-outline" onClick={handleSearch} disabled={searching}>
+            {searching ? <LoaderIcon width="14" height="14" /> : <SearchIcon width="14" height="14" />}
             {searching ? "..." : t("advisoryForm.search")}
           </button>
           <button
             type="button"
+            className="btn-outline btn-icon"
             onClick={useMyLocation}
             disabled={locating}
             title={t("advisoryForm.useMyLocation")}
+            aria-label={t("advisoryForm.useMyLocation")}
           >
-            {locating ? "..." : "📍"}
+            {locating ? <LoaderIcon width="14" height="14" /> : <MapPinIcon width="15" height="15" />}
           </button>
         </div>
         {suggestions.length > 0 && (
           <ul className="suggestions">
             {suggestions.map((s) => (
               <li key={`${s.latitude}-${s.longitude}`} onClick={() => pickSuggestion(s)}>
-                {s.name}{s.admin1 ? `, ${s.admin1}` : ""}{s.country ? `, ${s.country}` : ""}
+                <MapPinIcon width="14" height="14" style={{ color: "var(--primary)", flexShrink: 0 }} />
+                <span>{s.name}{s.admin1 ? `, ${s.admin1}` : ""}{s.country ? `, ${s.country}` : ""}</span>
               </li>
             ))}
           </ul>
@@ -180,7 +193,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
         {locateError && <span className="field-error">{locateError}</span>}
       </label>
 
-      <div className="grid-2">
+      <div className="grid-4">
         <label className="field">
           <span>{t("advisoryForm.placeName")}</span>
           <input value={form.place_name} onChange={update("place_name")} />
@@ -214,7 +227,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
       </div>
 
       <h3>{t("advisoryForm.soilHeading")}</h3>
-      <div className="grid-2">
+      <div className="grid-3">
         <label className="field">
           <span>{t("advisoryForm.nitrogen")}</span>
           <input
@@ -272,14 +285,28 @@ export default function AdvisoryForm({ onSubmit, loading }) {
             <span className="field-error">{errors.organic_carbon_pct}</span>
           )}
         </label>
-        <label className="field checkbox-field">
-          <input type="checkbox" checked={form.irrigation_available} onChange={update("irrigation_available")} />
+        <label className="field checkbox-field" style={{ alignSelf: "center", paddingTop: "14px" }}>
+          <input
+            type="checkbox"
+            checked={form.irrigation_available}
+            onChange={update("irrigation_available")}
+          />
           <span>{t("advisoryForm.irrigationAvailable")}</span>
         </label>
       </div>
 
-      <button type="submit" className="primary" disabled={loading}>
-        {loading ? t("advisoryForm.submitting") : t("advisoryForm.submit")}
+      <button type="submit" className="primary" disabled={loading} style={{ marginTop: "14px" }}>
+        {loading ? (
+          <>
+            <LoaderIcon width="16" height="16" />
+            <span>{t("advisoryForm.submitting")}</span>
+          </>
+        ) : (
+          <>
+            <SproutIcon width="16" height="16" />
+            <span>{t("advisoryForm.submit")}</span>
+          </>
+        )}
       </button>
     </form>
   );

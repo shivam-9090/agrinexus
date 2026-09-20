@@ -6,15 +6,14 @@ import {
   registerFederationNode,
   submitFederationInsight,
 } from "../api";
+import {
+  GlobeIcon,
+  ServerIcon,
+  ActivityIcon,
+  SparklesIcon,
+  LoaderIcon,
+} from "./Icons";
 import { useLanguage } from "../i18n/LanguageContext";
-
-const BRICS_SEED = [
-  { node_id: "in-mh-01", country: "India", region: "Maharashtra" },
-  { node_id: "br-mg-01", country: "Brazil", region: "Minas Gerais" },
-  { node_id: "za-fs-01", country: "South Africa", region: "Free State" },
-  { node_id: "ru-kk-01", country: "Russia", region: "Krasnodar Krai" },
-  { node_id: "cn-hn-01", country: "China", region: "Henan" },
-];
 
 const EMPTY_NODE = { node_id: "", country: "", region: "" };
 const EMPTY_INSIGHT = {
@@ -32,46 +31,52 @@ export default function CooperationPanel() {
   const [stats, setStats] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [insights, setInsights] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-
   const [nodeForm, setNodeForm] = useState(EMPTY_NODE);
   const [insightForm, setInsightForm] = useState(EMPTY_INSIGHT);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [nodeSubmitting, setNodeSubmitting] = useState(false);
   const [insightSubmitting, setInsightSubmitting] = useState(false);
 
   const refresh = async () => {
-    const [s, n, i] = await Promise.all([
-      fetchFederationStats(),
-      fetchFederationNodes(),
-      fetchFederationInsights(),
-    ]);
-    setStats(s);
-    setNodes(n);
-    setInsights(i);
+    try {
+      const [s, n, i] = await Promise.all([
+        fetchFederationStats(),
+        fetchFederationNodes(),
+        fetchFederationInsights(),
+      ]);
+      setStats(s);
+      setNodes(n);
+      setInsights(i);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   useEffect(() => {
-    refresh().catch((err) => setError(err.message));
+    refresh();
   }, []);
 
   const seedDemoNetwork = async () => {
     setBusy(true);
     setError(null);
     try {
-      for (const node of BRICS_SEED) {
-        await registerFederationNode({ ...node, contact: null });
-      }
-      const practices = [
-        "legume rotation",
-        "cover cropping",
-        "reduced tillage",
-        "compost amendment",
-        "contour bunding",
+      const demoNodes = [
+        { node_id: "in-mh-01", country: "India", region: "Maharashtra", contact: "icrisat@example.org" },
+        { node_id: "br-mt-01", country: "Brazil", region: "Mato Grosso", contact: "embrapa@example.org" },
+        { node_id: "za-fs-01", country: "South Africa", region: "Free State", contact: "arc@example.org" },
       ];
-      const crops = ["wheat", "maize", "soybean", "rice", "sorghum"];
-      for (let idx = 0; idx < BRICS_SEED.length; idx++) {
-        const node = BRICS_SEED[idx];
+      for (const node of demoNodes) {
+        await registerFederationNode(node);
+      }
+      const crops = ["cotton", "soybeans", "maize"];
+      const practices = [
+        "biochar application & legume rotation",
+        "no-till direct seeding with cover crops",
+        "stubble mulching & minimal tillage",
+      ];
+      for (let idx = 0; idx < demoNodes.length; idx++) {
+        const node = demoNodes[idx];
         await submitFederationInsight({
           node_id: node.node_id,
           country: node.country,
@@ -128,195 +133,267 @@ export default function CooperationPanel() {
 
   return (
     <div className="cooperation-layout">
+      {/* 1. BRICS Cooperation Network Box (Same size as AgriNexus Header Box) */}
       <div className="card">
-        <h2>{t("cooperationPanel.heading")}</h2>
-        <p className="muted small">{t("cooperationPanel.description")}</p>
+        <div className="card-header">
+          <h2>
+            <GlobeIcon width="20" height="20" />
+            {t("cooperationPanel.heading")}
+          </h2>
+          <p className="card-desc">
+            {t("cooperationPanel.description")}
+          </p>
+        </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" style={{ marginBottom: "14px" }}>{error}</p>}
 
         {stats && (
-          <div className="stat-grid">
-            <div>
-              <span className="stat-value">{stats.registered_nodes}</span>
+          <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: "20px" }}>
+            <div className="stat-widget">
+              <span className="stat-widget-icon"><ServerIcon width="16" height="16" /></span>
               <span className="stat-label">{t("cooperationPanel.registeredNodes")}</span>
+              <span className="stat-value">{stats.registered_nodes}</span>
             </div>
-            <div>
-              <span className="stat-value">{stats.participating_countries.length}</span>
+            <div className="stat-widget">
+              <span className="stat-widget-icon"><GlobeIcon width="16" height="16" /></span>
               <span className="stat-label">{t("cooperationPanel.countries")}</span>
+              <span className="stat-value">{stats.participating_countries.length}</span>
             </div>
-            <div>
-              <span className="stat-value">{stats.total_insights_shared}</span>
+            <div className="stat-widget">
+              <span className="stat-widget-icon"><ActivityIcon width="16" height="16" /></span>
               <span className="stat-label">{t("cooperationPanel.insightsShared")}</span>
+              <span className="stat-value">{stats.total_insights_shared}</span>
             </div>
           </div>
         )}
 
-        <button className="primary" onClick={seedDemoNetwork} disabled={busy}>
-          {busy ? t("cooperationPanel.syncing") : t("cooperationPanel.simulateSync")}
+        <button className="primary" onClick={seedDemoNetwork} disabled={busy} style={{ marginBottom: "16px" }}>
+          {busy ? (
+            <>
+              <LoaderIcon width="16" height="16" />
+              <span>{t("cooperationPanel.syncing")}</span>
+            </>
+          ) : (
+            <>
+              <SparklesIcon width="16" height="16" />
+              <span>{t("cooperationPanel.simulateSync")}</span>
+            </>
+          )}
         </button>
 
         {insights.length > 0 ? (
-          <table className="insight-table">
-            <thead>
-              <tr>
-                <th>{t("cooperationPanel.tableCountry")}</th>
-                <th>{t("cooperationPanel.tableRegion")}</th>
-                <th>{t("cooperationPanel.tableCrop")}</th>
-                <th>{t("cooperationPanel.tableSoilScore")}</th>
-                <th>{t("cooperationPanel.tableLeadingPractice")}</th>
-                <th>{t("cooperationPanel.tableSample")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {insights.map((i, idx) => (
-                <tr key={idx}>
-                  <td>{i.country}</td>
-                  <td>{i.region}</td>
-                  <td>{i.crop}</td>
-                  <td>{i.avg_soil_health_score}</td>
-                  <td>{i.dominant_regenerative_practice}</td>
-                  <td>{i.sample_size}</td>
+          <div className="table-wrapper">
+            <table className="insight-table">
+              <thead>
+                <tr>
+                  <th>{t("cooperationPanel.tableCountry")}</th>
+                  <th>{t("cooperationPanel.tableRegion")}</th>
+                  <th>{t("cooperationPanel.tableCrop")}</th>
+                  <th>{t("cooperationPanel.tableSoilScore")}</th>
+                  <th>{t("cooperationPanel.tableLeadingPractice")}</th>
+                  <th>{t("cooperationPanel.tableSample")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {insights.map((i, idx) => (
+                  <tr key={idx}>
+                    <td><strong>{i.country}</strong></td>
+                    <td>{i.region}</td>
+                    <td style={{ textTransform: "capitalize" }}>{i.crop}</td>
+                    <td>
+                      <span className="badge" style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--panel-border)" }}>
+                        {i.avg_soil_health_score}
+                      </span>
+                    </td>
+                    <td>{i.dominant_regenerative_practice}</td>
+                    <td>{i.sample_size}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <p className="muted small">{t("cooperationPanel.noInsights")}</p>
+          <div className="empty-state-card" style={{ padding: "32px 16px" }}>
+            <p className="muted small">{t("cooperationPanel.noInsights")}</p>
+          </div>
         )}
       </div>
 
-      <div className="card">
-        <h2>{t("cooperationPanel.registerNodeHeading")}</h2>
-        <p className="muted small">{t("cooperationPanel.registerNodeDescription")}</p>
-        <form onSubmit={submitNode}>
-          <label className="field">
-            <span>{t("cooperationPanel.nodeId")}</span>
-            <input
-              required
-              value={nodeForm.node_id}
-              onChange={(e) => setNodeForm((f) => ({ ...f, node_id: e.target.value }))}
-              placeholder={t("cooperationPanel.nodeIdPlaceholder")}
-            />
-          </label>
-          <label className="field">
-            <span>{t("cooperationPanel.country")}</span>
-            <input
-              required
-              value={nodeForm.country}
-              onChange={(e) => setNodeForm((f) => ({ ...f, country: e.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>{t("cooperationPanel.region")}</span>
-            <input
-              required
-              value={nodeForm.region}
-              onChange={(e) => setNodeForm((f) => ({ ...f, region: e.target.value }))}
-            />
-          </label>
-          <button type="submit" className="primary" disabled={nodeSubmitting}>
-            {nodeSubmitting ? t("cooperationPanel.registering") : t("cooperationPanel.registerNode")}
-          </button>
-        </form>
-
-        <h2>{t("cooperationPanel.publishInsightHeading")}</h2>
-        <p className="muted small">{t("cooperationPanel.publishInsightDescription")}</p>
-        <form onSubmit={submitInsight}>
-          <label className="field">
-            <span>{t("cooperationPanel.nodeId")}</span>
-            <input
-              required
-              value={insightForm.node_id}
-              onChange={(e) => setInsightForm((f) => ({ ...f, node_id: e.target.value }))}
-            />
-          </label>
-          <div className="grid-2">
-            <label className="field">
-              <span>{t("cooperationPanel.country")}</span>
-              <input
-                required
-                value={insightForm.country}
-                onChange={(e) => setInsightForm((f) => ({ ...f, country: e.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>{t("cooperationPanel.region")}</span>
-              <input
-                required
-                value={insightForm.region}
-                onChange={(e) => setInsightForm((f) => ({ ...f, region: e.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>{t("cooperationPanel.crop")}</span>
-              <input
-                required
-                value={insightForm.crop}
-                onChange={(e) => setInsightForm((f) => ({ ...f, crop: e.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>{t("cooperationPanel.avgSoilHealthScore")}</span>
-              <input
-                required
-                type="number"
-                step="any"
-                min="0"
-                max="100"
-                value={insightForm.avg_soil_health_score}
-                onChange={(e) =>
-                  setInsightForm((f) => ({ ...f, avg_soil_health_score: e.target.value }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>{t("cooperationPanel.leadingPractice")}</span>
-              <input
-                required
-                value={insightForm.dominant_regenerative_practice}
-                onChange={(e) =>
-                  setInsightForm((f) => ({ ...f, dominant_regenerative_practice: e.target.value }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>{t("cooperationPanel.sampleSize")}</span>
-              <input
-                required
-                type="number"
-                min="1"
-                value={insightForm.sample_size}
-                onChange={(e) => setInsightForm((f) => ({ ...f, sample_size: e.target.value }))}
-              />
-            </label>
+      {/* 2. Register a Node & Publish an Insight in ONE LINE as SEPARATE BOXES */}
+      <div className="cooperation-forms-row">
+        <div className="card">
+          <div className="card-header">
+            <h2>
+              <ServerIcon width="18" height="18" />
+              {t("cooperationPanel.registerNodeHeading")}
+            </h2>
+            <p className="card-desc">{t("cooperationPanel.registerNodeDescription")}</p>
           </div>
-          <button type="submit" className="primary" disabled={insightSubmitting}>
-            {insightSubmitting ? t("cooperationPanel.publishing") : t("cooperationPanel.publishInsight")}
-          </button>
-        </form>
+          <form onSubmit={submitNode} className="cooperation-form-flex">
+            <div>
+              <label className="field">
+                <span>{t("cooperationPanel.nodeId")}</span>
+                <input
+                  required
+                  value={nodeForm.node_id}
+                  onChange={(e) => setNodeForm((f) => ({ ...f, node_id: e.target.value }))}
+                  placeholder={t("cooperationPanel.nodeIdPlaceholder")}
+                />
+              </label>
+              <div className="grid-2">
+                <label className="field">
+                  <span>{t("cooperationPanel.country")}</span>
+                  <input
+                    required
+                    value={nodeForm.country}
+                    onChange={(e) => setNodeForm((f) => ({ ...f, country: e.target.value }))}
+                    placeholder="e.g. India"
+                  />
+                </label>
+                <label className="field">
+                  <span>{t("cooperationPanel.region")}</span>
+                  <input
+                    required
+                    value={nodeForm.region}
+                    onChange={(e) => setNodeForm((f) => ({ ...f, region: e.target.value }))}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </label>
+              </div>
+            </div>
+            <button type="submit" className="primary" disabled={nodeSubmitting} style={{ marginTop: "16px" }}>
+              {nodeSubmitting ? t("cooperationPanel.registering") : t("cooperationPanel.registerNode")}
+            </button>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h2>
+              <ActivityIcon width="18" height="18" />
+              {t("cooperationPanel.publishInsightHeading")}
+            </h2>
+            <p className="card-desc">{t("cooperationPanel.publishInsightDescription")}</p>
+          </div>
+          <form onSubmit={submitInsight} className="cooperation-form-flex">
+            <div>
+              <label className="field">
+                <span>{t("cooperationPanel.nodeId")}</span>
+                <input
+                  required
+                  value={insightForm.node_id}
+                  onChange={(e) => setInsightForm((f) => ({ ...f, node_id: e.target.value }))}
+                  placeholder="e.g. in-mh-01"
+                />
+              </label>
+              <div className="grid-2">
+                <label className="field">
+                  <span>{t("cooperationPanel.country")}</span>
+                  <input
+                    required
+                    value={insightForm.country}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, country: e.target.value }))}
+                    placeholder="e.g. India"
+                  />
+                </label>
+                <label className="field">
+                  <span>{t("cooperationPanel.region")}</span>
+                  <input
+                    required
+                    value={insightForm.region}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, region: e.target.value }))}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </label>
+              </div>
+              <div className="grid-2">
+                <label className="field">
+                  <span>{t("cooperationPanel.crop")}</span>
+                  <input
+                    required
+                    value={insightForm.crop}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, crop: e.target.value }))}
+                    placeholder="e.g. cotton"
+                  />
+                </label>
+                <label className="field">
+                  <span>{t("cooperationPanel.avgSoilHealthScore")}</span>
+                  <input
+                    required
+                    type="number"
+                    step="any"
+                    min="0"
+                    max="100"
+                    value={insightForm.avg_soil_health_score}
+                    onChange={(e) =>
+                      setInsightForm((f) => ({ ...f, avg_soil_health_score: e.target.value }))
+                    }
+                    placeholder="e.g. 75"
+                  />
+                </label>
+              </div>
+              <div className="grid-2">
+                <label className="field">
+                  <span>{t("cooperationPanel.leadingPractice")}</span>
+                  <input
+                    required
+                    value={insightForm.dominant_regenerative_practice}
+                    onChange={(e) =>
+                      setInsightForm((f) => ({ ...f, dominant_regenerative_practice: e.target.value }))
+                    }
+                    placeholder="e.g. legume rotation"
+                  />
+                </label>
+                <label className="field">
+                  <span>{t("cooperationPanel.sampleSize")}</span>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    value={insightForm.sample_size}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, sample_size: e.target.value }))}
+                    placeholder="e.g. 120"
+                  />
+                </label>
+              </div>
+            </div>
+            <button type="submit" className="primary" disabled={insightSubmitting} style={{ marginTop: "16px" }}>
+              {insightSubmitting ? t("cooperationPanel.publishing") : t("cooperationPanel.publishInsight")}
+            </button>
+          </form>
+        </div>
       </div>
 
+      {/* 3. Registered Nodes List Box (Same size as AgriNexus Header Box) */}
       {nodes.length > 0 && (
-        <div className="card span-2">
-          <h2>{t("cooperationPanel.registeredNodesHeading", { count: nodes.length })}</h2>
-          <table className="insight-table">
-            <thead>
-              <tr>
-                <th>{t("cooperationPanel.tableNodeId")}</th>
-                <th>{t("cooperationPanel.tableCountry")}</th>
-                <th>{t("cooperationPanel.tableRegion")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map((n) => (
-                <tr key={n.node_id}>
-                  <td>{n.node_id}</td>
-                  <td>{n.country}</td>
-                  <td>{n.region}</td>
+        <div className="card">
+          <div className="card-header">
+            <h2>
+              <ServerIcon width="18" height="18" />
+              {t("cooperationPanel.registeredNodesHeading", { count: nodes.length })}
+            </h2>
+            <p className="card-desc">Active participating national and regional nodes.</p>
+          </div>
+          <div className="table-wrapper">
+            <table className="insight-table">
+              <thead>
+                <tr>
+                  <th>{t("cooperationPanel.tableNodeId")}</th>
+                  <th>{t("cooperationPanel.tableCountry")}</th>
+                  <th>{t("cooperationPanel.tableRegion")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {nodes.map((n) => (
+                  <tr key={n.node_id}>
+                    <td style={{ fontWeight: 600, fontFamily: "monospace" }}>{n.node_id}</td>
+                    <td>{n.country}</td>
+                    <td>{n.region}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
