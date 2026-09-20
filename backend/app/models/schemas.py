@@ -69,8 +69,13 @@ class AdvisoryResponse(BaseModel):
 
 class DiseaseDiagnosis(BaseModel):
     stress_level: Literal["healthy", "mild_stress", "moderate_stress", "severe_stress"]
-    healthy_tissue_pct: float
-    discoloration_pct: float
+    # pixel-ratio fields from the OpenCV heuristic path; None when a trained
+    # classifier produced this diagnosis instead (see predicted_label/confidence)
+    healthy_tissue_pct: float | None = None
+    discoloration_pct: float | None = None
+    # classifier fields; None when the OpenCV heuristic produced this diagnosis
+    predicted_label: str | None = None
+    confidence: float | None = None
     likely_causes: list[str]
     recommended_action: str
     method: str = "opencv-heuristic-v1"

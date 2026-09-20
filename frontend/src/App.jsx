@@ -5,15 +5,18 @@ import DiseasePanel from "./components/DiseasePanel";
 import CooperationPanel from "./components/CooperationPanel";
 import { fetchAdvisory } from "./api";
 import { SproutIcon, SatelliteIcon, ActivityIcon, GlobeIcon, LoaderIcon } from "./components/Icons";
+import { useLanguage } from "./i18n/LanguageContext";
+import { LANGUAGES } from "./i18n/translations";
 import "./App.css";
 
 const TABS = [
-  { id: "advisory", label: "Farm advisory", icon: SproutIcon },
-  { id: "disease", label: "Leaf diagnostics", icon: ActivityIcon },
-  { id: "cooperation", label: "BRICS cooperation", icon: GlobeIcon },
+  { id: "advisory", icon: SproutIcon },
+  { id: "disease", icon: ActivityIcon },
+  { id: "cooperation", icon: GlobeIcon },
 ];
 
 export default function App() {
+  const { t, lang, setLang } = useLanguage();
   const [tab, setTab] = useState("advisory");
   const [advisory, setAdvisory] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -45,25 +48,37 @@ export default function App() {
               <span className="badge-tag">Track 4 · BRICS</span>
             </div>
             <p className="brand-sub">
-              Open regenerative agriculture intelligence for AgriN &amp; BRICS Cooperation
+              {t("app.subtitle")}
             </p>
           </div>
         </div>
-        <nav className="tabs" aria-label="Navigation Tabs">
-          {TABS.map((t) => {
-            const IconComponent = t.icon;
-            return (
-              <button
-                key={t.id}
-                className={tab === t.id ? "tab active" : "tab"}
-                onClick={() => setTab(t.id)}
-              >
-                <IconComponent width="15" height="15" />
-                {t.label}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="header-controls">
+          <nav className="tabs" aria-label="Navigation Tabs">
+            {TABS.map((tItem) => {
+              const IconComponent = tItem.icon;
+              return (
+                <button
+                  key={tItem.id}
+                  className={tab === tItem.id ? "tab active" : "tab"}
+                  onClick={() => setTab(tItem.id)}
+                >
+                  <IconComponent width="15" height="15" />
+                  {t(`app.tab.${tItem.id}`)}
+                </button>
+              );
+            })}
+          </nav>
+          <label className="language-picker">
+            <span className="sr-only">{t("app.language")}</span>
+            <select value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t("app.language")}>
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </header>
 
       <main>
@@ -80,10 +95,7 @@ export default function App() {
                   <div className="empty-icon-box">
                     <LoaderIcon width="20" height="20" />
                   </div>
-                  <h3 className="empty-title">Generating Regenerative Advisory</h3>
-                  <p className="empty-desc">
-                    Fetching live weather from Open-Meteo, satellite agro-climatology from NASA POWER, and running the crop recommendation model...
-                  </p>
+                  <h3 className="empty-title">{t("app.loadingAdvisory")}</h3>
                 </div>
               )}
               {!loading && !advisory && !error && (
@@ -93,9 +105,7 @@ export default function App() {
                   </div>
                   <h3 className="empty-title">Awaiting Farm Telemetry</h3>
                   <p className="empty-desc">
-                    Fill in your farm's soil test and location, then request an advisory to see
-                    live weather, satellite agro-climatology, AI crop recommendations and
-                    regenerative practice guidance.
+                    {t("app.emptyState")}
                   </p>
                   <div className="feature-pills">
                     <span className="feature-pill">🛰️ NASA Satellite Climatology</span>
@@ -106,7 +116,7 @@ export default function App() {
               )}
               {!loading && advisory && (
                 <button type="button" className="reset-link" onClick={() => setAdvisory(null)}>
-                  &larr; Clear results
+                  &larr; {t("app.clearResults")}
                 </button>
               )}
               {!loading && <AdvisoryResults data={advisory} />}
@@ -120,10 +130,7 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        <p>
-          Built for Hack2Skill "Build with AI: Code for Communities" &mdash; Track 4 (AgriN &amp;
-          Regenerative Agricultural Intelligence). Live data: Open-Meteo &amp; NASA POWER.
-        </p>
+        <p>{t("app.footer")}</p>
       </footer>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { geocodePlace } from "../api";
 import { MapPinIcon, SearchIcon, SproutIcon, LoaderIcon } from "./Icons";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const DEFAULTS = {
   place_name: "Nagpur, India",
@@ -15,37 +16,40 @@ const DEFAULTS = {
   irrigation_available: false,
 };
 
-function validate(form) {
+function validate(form, t) {
   const errors = {};
   const num = (v) => (v === "" || v === null ? NaN : parseFloat(v));
 
   const lat = num(form.latitude);
-  if (Number.isNaN(lat) || lat < -90 || lat > 90) errors.latitude = "Must be between -90 and 90";
+  if (Number.isNaN(lat) || lat < -90 || lat > 90) errors.latitude = t("advisoryForm.errorLatitudeRange");
 
   const lon = num(form.longitude);
-  if (Number.isNaN(lon) || lon < -180 || lon > 180) errors.longitude = "Must be between -180 and 180";
+  if (Number.isNaN(lon) || lon < -180 || lon > 180) errors.longitude = t("advisoryForm.errorLongitudeRange");
 
-  for (const [key, label] of [
-    ["nitrogen", "Nitrogen"],
-    ["phosphorus", "Phosphorus"],
-    ["potassium", "Potassium"],
+  for (const [key, labelKey] of [
+    ["nitrogen", "advisoryForm.nitrogenLabel"],
+    ["phosphorus", "advisoryForm.phosphorusLabel"],
+    ["potassium", "advisoryForm.potassiumLabel"],
   ]) {
     const v = num(form[key]);
-    if (Number.isNaN(v) || v < 0 || v > 300) errors[key] = `${label} must be between 0 and 300 kg/ha`;
+    if (Number.isNaN(v) || v < 0 || v > 300) {
+      errors[key] = t("advisoryForm.errorNutrientRange", { label: t(labelKey) });
+    }
   }
 
   const ph = num(form.ph);
-  if (Number.isNaN(ph) || ph < 0 || ph > 14) errors.ph = "pH must be between 0 and 14";
+  if (Number.isNaN(ph) || ph < 0 || ph > 14) errors.ph = t("advisoryForm.errorPhRange");
 
   if (form.organic_carbon_pct !== "" && form.organic_carbon_pct !== null) {
     const oc = num(form.organic_carbon_pct);
-    if (Number.isNaN(oc) || oc < 0 || oc > 20) errors.organic_carbon_pct = "Must be between 0 and 20%";
+    if (Number.isNaN(oc) || oc < 0 || oc > 20) errors.organic_carbon_pct = t("advisoryForm.errorOrganicCarbonRange");
   }
 
   return errors;
 }
 
 export default function AdvisoryForm({ onSubmit, loading }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState(DEFAULTS);
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -68,10 +72,10 @@ export default function AdvisoryForm({ onSubmit, loading }) {
     try {
       const results = await geocodePlace(search.trim());
       setSuggestions(results);
-      if (results.length === 0) setLocateError(`No matches for "${search.trim()}"`);
+      if (results.length === 0) setLocateError(t("advisoryForm.noMatches", { query: search.trim() }));
     } catch (err) {
       setSuggestions([]);
-      setLocateError(err.message || "Location search failed");
+      setLocateError(err.message || t("advisoryForm.locationSearchFailed"));
     } finally {
       setSearching(false);
     }
@@ -91,7 +95,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
 
   const useMyLocation = () => {
     if (!("geolocation" in navigator)) {
-      setLocateError("Geolocation is not available in this browser");
+      setLocateError(t("advisoryForm.geolocationUnavailable"));
       return;
     }
     setLocating(true);
@@ -106,7 +110,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
         setLocating(false);
       },
       (err) => {
-        setLocateError(err.message || "Could not get your location");
+        setLocateError(err.message || t("advisoryForm.couldNotGetLocation"));
         setLocating(false);
       },
       { timeout: 10000 }
@@ -116,7 +120,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
   const submit = (e) => {
     e.preventDefault();
     setTouched(true);
-    const validationErrors = validate(form);
+    const validationErrors = validate(form, t);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
@@ -146,7 +150,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
       <div className="card-header">
         <h2>
           <SproutIcon width="20" height="20" />
-          Farm details
+          {t("advisoryForm.heading")}
         </h2>
         <p className="card-desc">
           Geocode your farm coordinates and input laboratory soil test parameters.
@@ -154,24 +158,24 @@ export default function AdvisoryForm({ onSubmit, loading }) {
       </div>
 
       <label className="field" style={{ position: "relative" }}>
-        <span>Search location</span>
+        <span>{t("advisoryForm.searchLocation")}</span>
         <div className="search-input-group">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="e.g. Nagpur, India"
+            placeholder={t("advisoryForm.searchPlaceholder")}
           />
           <button type="button" className="btn-outline" onClick={handleSearch} disabled={searching}>
             {searching ? <LoaderIcon width="14" height="14" /> : <SearchIcon width="14" height="14" />}
-            Search
+            {searching ? "..." : t("advisoryForm.search")}
           </button>
           <button
             type="button"
             className="btn-outline btn-icon"
             onClick={useMyLocation}
             disabled={locating}
-            title="Use my current location"
-            aria-label="Use my current location"
+            title={t("advisoryForm.useMyLocation")}
+            aria-label={t("advisoryForm.useMyLocation")}
           >
             {locating ? <LoaderIcon width="14" height="14" /> : <MapPinIcon width="15" height="15" />}
           </button>
@@ -191,15 +195,15 @@ export default function AdvisoryForm({ onSubmit, loading }) {
 
       <div className="grid-4">
         <label className="field">
-          <span>Place name</span>
+          <span>{t("advisoryForm.placeName")}</span>
           <input value={form.place_name} onChange={update("place_name")} />
         </label>
         <label className="field">
-          <span>Current / previous crop</span>
+          <span>{t("advisoryForm.currentCrop")}</span>
           <input value={form.current_crop} onChange={update("current_crop")} />
         </label>
         <label className="field">
-          <span>Latitude</span>
+          <span>{t("advisoryForm.latitude")}</span>
           <input
             type="number"
             step="any"
@@ -210,7 +214,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
           {fieldError("latitude") && <span className="field-error">{errors.latitude}</span>}
         </label>
         <label className="field">
-          <span>Longitude</span>
+          <span>{t("advisoryForm.longitude")}</span>
           <input
             type="number"
             step="any"
@@ -222,10 +226,10 @@ export default function AdvisoryForm({ onSubmit, loading }) {
         </label>
       </div>
 
-      <h3>Soil test (kg/ha, pH)</h3>
+      <h3>{t("advisoryForm.soilHeading")}</h3>
       <div className="grid-3">
         <label className="field">
-          <span>Nitrogen (N)</span>
+          <span>{t("advisoryForm.nitrogen")}</span>
           <input
             type="number"
             step="any"
@@ -236,7 +240,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
           {fieldError("nitrogen") && <span className="field-error">{errors.nitrogen}</span>}
         </label>
         <label className="field">
-          <span>Phosphorus (P)</span>
+          <span>{t("advisoryForm.phosphorus")}</span>
           <input
             type="number"
             step="any"
@@ -247,7 +251,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
           {fieldError("phosphorus") && <span className="field-error">{errors.phosphorus}</span>}
         </label>
         <label className="field">
-          <span>Potassium (K)</span>
+          <span>{t("advisoryForm.potassium")}</span>
           <input
             type="number"
             step="any"
@@ -258,7 +262,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
           {fieldError("potassium") && <span className="field-error">{errors.potassium}</span>}
         </label>
         <label className="field">
-          <span>pH</span>
+          <span>{t("advisoryForm.ph")}</span>
           <input
             type="number"
             step="any"
@@ -269,7 +273,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
           {fieldError("ph") && <span className="field-error">{errors.ph}</span>}
         </label>
         <label className="field">
-          <span>Organic carbon %</span>
+          <span>{t("advisoryForm.organicCarbon")}</span>
           <input
             type="number"
             step="any"
@@ -287,7 +291,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
             checked={form.irrigation_available}
             onChange={update("irrigation_available")}
           />
-          <span>Irrigation available</span>
+          <span>{t("advisoryForm.irrigationAvailable")}</span>
         </label>
       </div>
 
@@ -295,12 +299,12 @@ export default function AdvisoryForm({ onSubmit, loading }) {
         {loading ? (
           <>
             <LoaderIcon width="16" height="16" />
-            <span>Fetching advisory...</span>
+            <span>{t("advisoryForm.submitting")}</span>
           </>
         ) : (
           <>
             <SproutIcon width="16" height="16" />
-            <span>Get regenerative advisory</span>
+            <span>{t("advisoryForm.submit")}</span>
           </>
         )}
       </button>

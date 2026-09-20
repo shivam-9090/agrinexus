@@ -5,12 +5,18 @@ services:
       - "8010:8000"
     volumes:
       - federation-db:/app/app/data/federation
+    environment:
+      # Unset by default -- see backend/.env.example. Set both this and
+      # frontend's VITE_FEDERATION_API_KEY (same value) to require auth on
+      # federation writes.
+      FEDERATION_API_KEY: ${FEDERATION_API_KEY:-}
 
   frontend:
     build:
       context: ./frontend
       args:
         VITE_API_URL: http://localhost:8010/api/v1
+        VITE_FEDERATION_API_KEY: ${FEDERATION_API_KEY:-}
     ports:
       - "3000:80"
     depends_on:

@@ -124,6 +124,13 @@ body {
   color: var(--text-muted);
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 /* shadcn Tabs Segmented Control */
 .tabs {
   display: inline-flex;
@@ -133,6 +140,35 @@ body {
   border-radius: var(--radius);
   border: 1px solid var(--panel-border);
   gap: 4px;
+}
+
+.language-picker select {
+  background: var(--panel);
+  border: 1px solid var(--panel-border-strong);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.language-picker select:focus {
+  border-color: var(--primary);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .tab {

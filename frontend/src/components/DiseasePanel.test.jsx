@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "../test-utils";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DiseasePanel from "./DiseasePanel";
@@ -44,6 +44,31 @@ describe("DiseasePanel", () => {
 
     expect(await screen.findByText("Healthy")).toBeInTheDocument();
     expect(screen.getByText(/no visible stress detected/i)).toBeInTheDocument();
+  });
+
+  it("shows the predicted label and confidence for a CNN-style result", async () => {
+    const { diagnoseDisease } = await import("../api");
+    diagnoseDisease.mockResolvedValue({
+      stress_level: "severe_stress",
+      healthy_tissue_pct: null,
+      discoloration_pct: null,
+      predicted_label: "Tomato with Late Blight",
+      confidence: 0.986,
+      likely_causes: ["late blight"],
+      recommended_action: "Model detected late blight on tomato (99% confidence).",
+      method: "cnn:mobilenet_v2_1.0_224-plant-disease-identification",
+    });
+
+    const user = userEvent.setup();
+    render(<DiseasePanel />);
+
+    await user.upload(screen.getByLabelText(/leaf photo/i), makeFile());
+    await user.click(screen.getByRole("button", { name: /diagnose leaf/i }));
+
+    expect(await screen.findByText(/tomato with late blight/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/99% confidence/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/healthy tissue:/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/method: cnn:/i)).toBeInTheDocument();
   });
 
   it("shows an error message when the API call fails", async () => {

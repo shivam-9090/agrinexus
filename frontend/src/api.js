@@ -1,4 +1,13 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8123/api/v1";
+const FEDERATION_API_KEY = import.meta.env.VITE_FEDERATION_API_KEY || "";
+
+// Only sent on federation writes, and only when set -- see the backend's
+// FEDERATION_API_KEY: this is a shared demo-mode secret, not per-node auth.
+function federationWriteHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  if (FEDERATION_API_KEY) headers["X-API-Key"] = FEDERATION_API_KEY;
+  return headers;
+}
 
 async function handle(res) {
   if (!res.ok) {
@@ -47,7 +56,7 @@ export async function fetchFederationInsights() {
 export async function registerFederationNode(node) {
   const res = await fetch(`${API_URL}/federation/nodes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: federationWriteHeaders(),
     body: JSON.stringify(node),
   });
   return handle(res);
@@ -56,7 +65,7 @@ export async function registerFederationNode(node) {
 export async function submitFederationInsight(insight) {
   const res = await fetch(`${API_URL}/federation/insights`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: federationWriteHeaders(),
     body: JSON.stringify(insight),
   });
   return handle(res);

@@ -24,10 +24,10 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
                          │  /advisory                │
                          │    ├─ weather_service   ──┼──▶ Open-Meteo API (live)
                          │    ├─ climate_service   ──┼──▶ NASA POWER API (live, satellite)
-                         │    ├─ crop_recommender    │  (RandomForest, trained offline)
+                         │    ├─ crop_recommender    │  (RandomForest, real dataset)
                          │    └─ regenerative_engine │  (explainable rule engine)
                          │                           │
-                         │  /disease/diagnose        │  (OpenCV leaf-stress heuristic)
+                         │  /disease/diagnose        │  (trained CNN, CV heuristic fallback)
                          │                           │
                          │  /federation              │  (BRICS cooperation / digital
                          │    ├─ nodes               │   public good layer)
@@ -44,11 +44,16 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   which is the "satellite data" leg of the brief without requiring paid
   Sentinel Hub / Earth Engine credentials during a 12-day build.
 
-- **Crop recommendation model**: a scikit-learn RandomForest trained on a
-  small tabular dataset seeded from published agronomic requirement ranges
-  per crop (see `backend/app/ml/generate_dataset.py` docstring for the
-  explicit limitation and the upgrade path to a real regional dataset, ideally
-  contributed via the federation API itself).
+- **Crop recommendation model**: a scikit-learn RandomForest trained on the
+  real "Crop Recommendation Dataset" (Kaggle, Atharva Ingle — 2,200 rows,
+  22 crops, N/P/K/temperature/humidity/pH/rainfall; provenance and license
+  caveat in `backend/app/ml/real_data/SOURCE.md`). 99.3% hold-out accuracy,
+  up from 94.7% on the synthetic seed data this replaced. The synthetic
+  generator (`generate_dataset.py`) stays in the repo as a documented,
+  automatic fallback if the real CSV is ever missing (`train_crop_model.py`
+  falls back rather than hard-failing) — useful for a from-scratch
+  environment with no internet access to re-fetch it. A better upgrade path
+  than either is real regional data contributed via the federation API.
 
 - **Regenerative practice engine**: deterministic, explainable rules
   (legume rotation for low N, compost/no-till for low organic carbon, lime/
@@ -56,13 +61,28 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   precipitation/soil moisture) rather than an opaque model — this matters for
   farmer trust and for judges checking "why did it say this."
 
-- **Leaf diagnostics**: an OpenCV color-space heuristic (healthy green vs.
-  chlorotic/necrotic tissue ratio), not a trained CNN. No labeled disease
-  image dataset or GPU was available in this environment. It's honestly
-  labeled `opencv-heuristic-v1` end-to-end (API + UI) with a documented
-  upgrade path to a MobileNetV2/EfficientNet model trained on PlantVillage or
-  on images collected through the federation network — swapping in a real
-  model only touches `disease_detector.py`, not the API contract.
+- **Leaf diagnostics**: a trained MobileNetV2 classifier
+  (`linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification` on
+  Hugging Face — 38 classes across 14 crops, fine-tuned on the PlantVillage
+  dataset, 95.41% self-reported eval accuracy). We didn't train this
+  ourselves: no labeled leaf-disease dataset or GPU was available in this
+  environment, and adopting a public checkpoint with a verified accuracy
+  number is more defensible than training a worse one from scratch. Verified
+  before adopting it (non-gated, ~9.3MB, standard `transformers`
+  architecture) and again after, by running it against a real CC-licensed
+  photo of tomato late blight from Wikimedia Commons — correctly diagnosed
+  at 100% confidence. One honest caveat found in that same testing: the
+  model expects PlantVillage-style input (a single leaf, close-up, roughly
+  plain background) — a wide garden photo of a whole plant with fruit gave
+  a garbage high-confidence prediction, because that framing is out of its
+  training distribution. The UI now says so. `disease_service.py` tries the
+  CNN first and falls back to the original OpenCV heuristic
+  (`disease_detector.py`, still labeled `opencv-heuristic-v1`) if the model
+  fails to load or run — e.g. offline dev, a slow first-download racing a
+  request, or the HF repo being briefly down — so a farmer gets an answer
+  either way instead of a 500. `docker build` pre-downloads the weights
+  (`prefetch_disease_model.py`) so the deployed container doesn't pay for
+  that download on its first real request.
 
 - **Caching**: weather/climate/geocode lookups are cached in-process per
   (rounded) coordinate (`backend/app/services/cache.py`) — 30 min for
@@ -79,6 +99,31 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   slice of the brief, kept to stdlib `logging` rather than pulling in an
   APM dependency for a hackathon deployment.
 
+- **Rate limiting**: a per-client-IP sliding-window limiter
+  (`backend/app/services/rate_limiter.py`, wired in as ASGI middleware in
+  `middleware.py`) protects the backend itself, separately from the
+  response cache protecting the upstream weather/climate APIs. Default
+  120 requests/60s per IP, `/health` exempt so uptime checks aren't
+  throttled, 429 responses carry `Retry-After` and are still logged (the
+  rate limiter sits inside the request-logging middleware on purpose, so
+  throttled requests show up in the logs instead of vanishing silently).
+  Single-instance, in-memory — same caveat as the cache: a
+  multi-instance deployment would need this backed by Redis instead.
+  Configurable via `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` /
+  `RATE_LIMIT_ENABLED`.
+
+- **Federation write auth**: `POST /federation/nodes` and
+  `POST /federation/insights` are gated behind an optional shared-secret
+  `X-API-Key` header (`FEDERATION_API_KEY` env var; unset by default so
+  local dev/demo needs zero setup). `GET` endpoints stay public — the
+  cooperation-network view and stats are meant to be readable by anyone,
+  only writes need gating. This is explicitly a shared secret, not
+  per-node credentials: every writer uses the same key, so it stops
+  drive-by abuse of a public URL but doesn't let you attribute or revoke
+  one bad actor without rotating the key for everyone. A production
+  version would issue each participating node its own credential — see
+  Known limitations.
+
 - **Federation layer (the BRICS "Cooperation" hook)**: the actual
   differentiator for this theme. Regional nodes (one per BRICS country in the
   demo) register and publish only aggregated, anonymized soil-health and
@@ -87,13 +132,49 @@ infrastructure for BRICS nations to cooperate on climate-resilient farming.
   single-country tool into shared digital public-good infrastructure, which
   is explicitly what the AgriN brief asks for.
 
+- **Multi-language UI**: a small custom React context (`frontend/src/i18n/`)
+  rather than a library like `react-i18next` — five languages and a flat
+  `t(key, vars)` lookup with `{placeholder}` interpolation didn't justify
+  the dependency. English, हिन्दी, Português, Русский, 中文 — the most-used
+  BRICS languages (South Africa is commonly served in English). The
+  selected language persists in `localStorage` and is verified for
+  completeness by a test that checks every language has exactly the same
+  key set as English with no empty values, plus a test that every
+  `{placeholder}` used in an English string also appears in every other
+  language's string for that key — a translation with a missing or
+  mismatched interpolation variable fails CI instead of shipping broken.
+  Scope: this localizes UI chrome only, not backend-generated content
+  (crop names, advisory rationale, regenerative-practice text) — see
+  Known limitations below.
+
 ## Known limitations (stated up front for judges)
 
-- Crop model is trained on a synthetic seed dataset, not field records.
-- Disease detection is a heuristic, not a trained classifier.
+- Crop model is trained on a real published dataset, but a generic Indian
+  one — not regional data for the specific BRICS geographies this project
+  targets. The federation API is the intended path to fix that.
+- Disease detection uses a real trained classifier, but one we adopted
+  rather than trained ourselves, and it works best on PlantVillage-style
+  close-up single-leaf photos, not arbitrary field photos — see above.
 - Federation store is SQLite (a single file at
   `backend/app/data/federation/federation.db`, persisted via a Docker
   volume) — this survives restarts, unlike the original in-memory version,
   but it's still one file with no per-node access control. A production
   version would move to Postgres with row-level tenancy so one node can't
   overwrite another's data.
+- The multi-language UI covers static chrome only (labels, buttons,
+  validation text) in 5 languages. Content the backend generates
+  dynamically — crop names, advisory rationale, regenerative-practice
+  descriptions, weather/climate source strings — stays in English; closing
+  that gap needs server-side i18n or a translation API, not just more
+  frontend strings.
+- Federation write auth is a **shared secret**, not per-node credentials —
+  every writer uses the same `FEDERATION_API_KEY`. It stops a random
+  stranger from spamming a public URL; it doesn't give you per-node
+  attribution, revocation, or the ability to trust that "India's node" data
+  actually came from India's node rather than someone with the shared key.
+  A production version would issue each node its own credential (API key
+  per row in the `nodes` table, or proper OAuth/mTLS between nodes).
+- Rate limiting is **in-memory and per-process** — correct for the single
+  backend container this ships as, but a multi-instance/load-balanced
+  deployment would need it backed by something shared (Redis) or each
+  instance's limit would effectively multiply by the instance count.

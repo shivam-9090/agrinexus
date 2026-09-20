@@ -6,7 +6,9 @@ import uuid
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
+
+from app.services.rate_limiter import RateLimiter
 
 logger = logging.getLogger("app.request")
 
@@ -51,3 +53,34 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             },
         )
         return response
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Per-client-IP sliding-window throttle.
+
+    Applies to every path except /health (used by uptime checks/orchestrators,
+    which would otherwise burn through the budget on their own). Returns 429
+    with Retry-After rather than raising, so it works regardless of where it
+    sits relative to Starlette's own exception-handling middleware.
+    """
+
+    EXEMPT_PATHS = {"/health"}
+
+    def __init__(self, app, limiter: RateLimiter) -> None:
+        super().__init__(app)
+        self.limiter = limiter
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if request.url.path in self.EXEMPT_PATHS:
+            return await call_next(request)
+
+        client_key = request.client.host if request.client else "unknown"
+        allowed, retry_after = self.limiter.allow(client_key)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded. Please slow down and try again shortly."},
+                headers={"Retry-After": str(retry_after)},
+            )
+
+        return await call_next(request)

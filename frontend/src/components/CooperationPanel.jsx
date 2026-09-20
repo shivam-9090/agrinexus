@@ -7,20 +7,13 @@ import {
   submitFederationInsight,
 } from "../api";
 import {
-  ActivityIcon,
   GlobeIcon,
-  LoaderIcon,
   ServerIcon,
+  ActivityIcon,
   SparklesIcon,
+  LoaderIcon,
 } from "./Icons";
-
-const BRICS_SEED = [
-  { node_id: "in-mh-01", country: "India", region: "Maharashtra" },
-  { node_id: "br-mg-01", country: "Brazil", region: "Minas Gerais" },
-  { node_id: "za-fs-01", country: "South Africa", region: "Free State" },
-  { node_id: "ru-kk-01", country: "Russia", region: "Krasnodar Krai" },
-  { node_id: "cn-hn-01", country: "China", region: "Henan" },
-];
+import { useLanguage } from "../i18n/LanguageContext";
 
 const EMPTY_NODE = { node_id: "", country: "", region: "" };
 const EMPTY_INSIGHT = {
@@ -34,49 +27,56 @@ const EMPTY_INSIGHT = {
 };
 
 export default function CooperationPanel() {
+  const { t } = useLanguage();
   const [stats, setStats] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [insights, setInsights] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-
   const [nodeForm, setNodeForm] = useState(EMPTY_NODE);
   const [insightForm, setInsightForm] = useState(EMPTY_INSIGHT);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [nodeSubmitting, setNodeSubmitting] = useState(false);
   const [insightSubmitting, setInsightSubmitting] = useState(false);
 
   const refresh = async () => {
-    const [s, n, i] = await Promise.all([
-      fetchFederationStats(),
-      fetchFederationNodes(),
-      fetchFederationInsights(),
-    ]);
-    setStats(s);
-    setNodes(n);
-    setInsights(i);
+    try {
+      const [s, n, i] = await Promise.all([
+        fetchFederationStats(),
+        fetchFederationNodes(),
+        fetchFederationInsights(),
+      ]);
+      setStats(s);
+      setNodes(n);
+      setInsights(i);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   useEffect(() => {
-    refresh().catch((err) => setError(err.message));
+    refresh();
   }, []);
 
   const seedDemoNetwork = async () => {
     setBusy(true);
     setError(null);
     try {
-      for (const node of BRICS_SEED) {
-        await registerFederationNode({ ...node, contact: null });
-      }
-      const practices = [
-        "legume rotation",
-        "cover cropping",
-        "reduced tillage",
-        "compost amendment",
-        "contour bunding",
+      const demoNodes = [
+        { node_id: "in-mh-01", country: "India", region: "Maharashtra", contact: "icrisat@example.org" },
+        { node_id: "br-mt-01", country: "Brazil", region: "Mato Grosso", contact: "embrapa@example.org" },
+        { node_id: "za-fs-01", country: "South Africa", region: "Free State", contact: "arc@example.org" },
       ];
-      const crops = ["wheat", "maize", "soybean", "rice", "sorghum"];
-      for (let idx = 0; idx < BRICS_SEED.length; idx++) {
-        const node = BRICS_SEED[idx];
+      for (const node of demoNodes) {
+        await registerFederationNode(node);
+      }
+      const crops = ["cotton", "soybeans", "maize"];
+      const practices = [
+        "biochar application & legume rotation",
+        "no-till direct seeding with cover crops",
+        "stubble mulching & minimal tillage",
+      ];
+      for (let idx = 0; idx < demoNodes.length; idx++) {
+        const node = demoNodes[idx];
         await submitFederationInsight({
           node_id: node.node_id,
           country: node.country,
@@ -138,13 +138,10 @@ export default function CooperationPanel() {
         <div className="card-header">
           <h2>
             <GlobeIcon width="20" height="20" />
-            BRICS cooperation network
+            {t("cooperationPanel.heading")}
           </h2>
           <p className="card-desc">
-            Each participating region runs its own AgriNexus node and publishes only aggregated,
-            anonymized soil-health and regenerative-practice signals here &mdash; the shared,
-            interoperable "digital public good" layer called for by the AgriN brief, without any
-            individual farmer data crossing borders.
+            {t("cooperationPanel.description")}
           </p>
         </div>
 
@@ -154,17 +151,17 @@ export default function CooperationPanel() {
           <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: "20px" }}>
             <div className="stat-widget">
               <span className="stat-widget-icon"><ServerIcon width="16" height="16" /></span>
-              <span className="stat-label">Registered nodes</span>
+              <span className="stat-label">{t("cooperationPanel.registeredNodes")}</span>
               <span className="stat-value">{stats.registered_nodes}</span>
             </div>
             <div className="stat-widget">
               <span className="stat-widget-icon"><GlobeIcon width="16" height="16" /></span>
-              <span className="stat-label">Countries</span>
+              <span className="stat-label">{t("cooperationPanel.countries")}</span>
               <span className="stat-value">{stats.participating_countries.length}</span>
             </div>
             <div className="stat-widget">
               <span className="stat-widget-icon"><ActivityIcon width="16" height="16" /></span>
-              <span className="stat-label">Insights shared</span>
+              <span className="stat-label">{t("cooperationPanel.insightsShared")}</span>
               <span className="stat-value">{stats.total_insights_shared}</span>
             </div>
           </div>
@@ -174,12 +171,12 @@ export default function CooperationPanel() {
           {busy ? (
             <>
               <LoaderIcon width="16" height="16" />
-              <span>Syncing network data...</span>
+              <span>{t("cooperationPanel.syncing")}</span>
             </>
           ) : (
             <>
               <SparklesIcon width="16" height="16" />
-              <span>Simulate BRICS network sync (demo)</span>
+              <span>{t("cooperationPanel.simulateSync")}</span>
             </>
           )}
         </button>
@@ -189,18 +186,18 @@ export default function CooperationPanel() {
             <table className="insight-table">
               <thead>
                 <tr>
-                  <th>Country</th>
-                  <th>Region</th>
-                  <th>Crop</th>
-                  <th>Soil score</th>
-                  <th>Leading practice</th>
-                  <th>Sample</th>
+                  <th>{t("cooperationPanel.tableCountry")}</th>
+                  <th>{t("cooperationPanel.tableRegion")}</th>
+                  <th>{t("cooperationPanel.tableCrop")}</th>
+                  <th>{t("cooperationPanel.tableSoilScore")}</th>
+                  <th>{t("cooperationPanel.tableLeadingPractice")}</th>
+                  <th>{t("cooperationPanel.tableSample")}</th>
                 </tr>
               </thead>
               <tbody>
                 {insights.map((i, idx) => (
                   <tr key={idx}>
-                    <td style={{ fontWeight: 600 }}>{i.country}</td>
+                    <td><strong>{i.country}</strong></td>
                     <td>{i.region}</td>
                     <td style={{ textTransform: "capitalize" }}>{i.crop}</td>
                     <td>
@@ -217,7 +214,7 @@ export default function CooperationPanel() {
           </div>
         ) : (
           <div className="empty-state-card" style={{ padding: "32px 16px" }}>
-            <p className="muted small">No insights shared yet. Try the demo sync above.</p>
+            <p className="muted small">{t("cooperationPanel.noInsights")}</p>
           </div>
         )}
       </div>
@@ -228,24 +225,24 @@ export default function CooperationPanel() {
           <div className="card-header">
             <h2>
               <ServerIcon width="18" height="18" />
-              Register a node
+              {t("cooperationPanel.registerNodeHeading")}
             </h2>
-            <p className="card-desc">Add your own regional node to the network manually.</p>
+            <p className="card-desc">{t("cooperationPanel.registerNodeDescription")}</p>
           </div>
           <form onSubmit={submitNode} className="cooperation-form-flex">
             <div>
               <label className="field">
-                <span>Node ID</span>
+                <span>{t("cooperationPanel.nodeId")}</span>
                 <input
                   required
                   value={nodeForm.node_id}
                   onChange={(e) => setNodeForm((f) => ({ ...f, node_id: e.target.value }))}
-                  placeholder="e.g. in-mh-01"
+                  placeholder={t("cooperationPanel.nodeIdPlaceholder")}
                 />
               </label>
               <div className="grid-2">
                 <label className="field">
-                  <span>Country</span>
+                  <span>{t("cooperationPanel.country")}</span>
                   <input
                     required
                     value={nodeForm.country}
@@ -254,7 +251,7 @@ export default function CooperationPanel() {
                   />
                 </label>
                 <label className="field">
-                  <span>Region</span>
+                  <span>{t("cooperationPanel.region")}</span>
                   <input
                     required
                     value={nodeForm.region}
@@ -265,7 +262,7 @@ export default function CooperationPanel() {
               </div>
             </div>
             <button type="submit" className="primary" disabled={nodeSubmitting} style={{ marginTop: "16px" }}>
-              {nodeSubmitting ? "Registering..." : "Register node"}
+              {nodeSubmitting ? t("cooperationPanel.registering") : t("cooperationPanel.registerNode")}
             </button>
           </form>
         </div>
@@ -274,14 +271,14 @@ export default function CooperationPanel() {
           <div className="card-header">
             <h2>
               <ActivityIcon width="18" height="18" />
-              Publish an insight
+              {t("cooperationPanel.publishInsightHeading")}
             </h2>
-            <p className="card-desc">Share an aggregated regional signal with partner nations.</p>
+            <p className="card-desc">{t("cooperationPanel.publishInsightDescription")}</p>
           </div>
           <form onSubmit={submitInsight} className="cooperation-form-flex">
             <div>
               <label className="field">
-                <span>Node ID</span>
+                <span>{t("cooperationPanel.nodeId")}</span>
                 <input
                   required
                   value={insightForm.node_id}
@@ -291,7 +288,7 @@ export default function CooperationPanel() {
               </label>
               <div className="grid-2">
                 <label className="field">
-                  <span>Country</span>
+                  <span>{t("cooperationPanel.country")}</span>
                   <input
                     required
                     value={insightForm.country}
@@ -300,7 +297,7 @@ export default function CooperationPanel() {
                   />
                 </label>
                 <label className="field">
-                  <span>Region</span>
+                  <span>{t("cooperationPanel.region")}</span>
                   <input
                     required
                     value={insightForm.region}
@@ -311,7 +308,7 @@ export default function CooperationPanel() {
               </div>
               <div className="grid-2">
                 <label className="field">
-                  <span>Crop</span>
+                  <span>{t("cooperationPanel.crop")}</span>
                   <input
                     required
                     value={insightForm.crop}
@@ -320,7 +317,7 @@ export default function CooperationPanel() {
                   />
                 </label>
                 <label className="field">
-                  <span>Avg soil health score</span>
+                  <span>{t("cooperationPanel.avgSoilHealthScore")}</span>
                   <input
                     required
                     type="number"
@@ -337,7 +334,7 @@ export default function CooperationPanel() {
               </div>
               <div className="grid-2">
                 <label className="field">
-                  <span>Leading practice</span>
+                  <span>{t("cooperationPanel.leadingPractice")}</span>
                   <input
                     required
                     value={insightForm.dominant_regenerative_practice}
@@ -348,7 +345,7 @@ export default function CooperationPanel() {
                   />
                 </label>
                 <label className="field">
-                  <span>Sample size</span>
+                  <span>{t("cooperationPanel.sampleSize")}</span>
                   <input
                     required
                     type="number"
@@ -361,7 +358,7 @@ export default function CooperationPanel() {
               </div>
             </div>
             <button type="submit" className="primary" disabled={insightSubmitting} style={{ marginTop: "16px" }}>
-              {insightSubmitting ? "Publishing..." : "Publish insight"}
+              {insightSubmitting ? t("cooperationPanel.publishing") : t("cooperationPanel.publishInsight")}
             </button>
           </form>
         </div>
@@ -373,7 +370,7 @@ export default function CooperationPanel() {
           <div className="card-header">
             <h2>
               <ServerIcon width="18" height="18" />
-              Registered nodes ({nodes.length})
+              {t("cooperationPanel.registeredNodesHeading", { count: nodes.length })}
             </h2>
             <p className="card-desc">Active participating national and regional nodes.</p>
           </div>
@@ -381,9 +378,9 @@ export default function CooperationPanel() {
             <table className="insight-table">
               <thead>
                 <tr>
-                  <th>Node ID</th>
-                  <th>Country</th>
-                  <th>Region</th>
+                  <th>{t("cooperationPanel.tableNodeId")}</th>
+                  <th>{t("cooperationPanel.tableCountry")}</th>
+                  <th>{t("cooperationPanel.tableRegion")}</th>
                 </tr>
               </thead>
               <tbody>

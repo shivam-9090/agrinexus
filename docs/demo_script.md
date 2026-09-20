@@ -16,9 +16,12 @@
    each recommendation is explainable (tied to a specific soil/climate
    signal), not a black box.
 
-4. **Leaf diagnostics (30s)** — Switch tab, upload a leaf photo, show the
-   stress-level result and recommended action. Be upfront: "v1 heuristic,
-   documented upgrade path to a trained CNN once we have field images."
+4. **Leaf diagnostics (30s)** — Switch tab, upload a close-up leaf photo
+   (a real diseased-leaf photo works best for the demo, not a whole-plant
+   shot), show the predicted disease, confidence, and recommended action.
+   Point out it's a real trained classifier (MobileNetV2, 38 diseases
+   across 14 crops), with an automatic fallback to an explainable
+   CV heuristic if the model can't load.
 
 5. **BRICS cooperation (45s)** — Switch to "BRICS cooperation". Click
    "Simulate BRICS network sync" to register five demo regional nodes (India,
@@ -27,6 +30,13 @@
    this is the digital-public-good / cross-border cooperation piece the
    brief explicitly asks for.
 
-6. **Close (20s)** — Roadmap: real regional training data via the federation
-   API, a trained CNN for disease detection, multi-language UI for BRICS
-   farmers, SMS/WhatsApp delivery for low-connectivity areas.
+6. **Language switch (15s)** — Use the language picker in the header to
+   switch to हिन्दी, Русский or 中文 and show the whole UI (labels, buttons,
+   validation messages) relabel instantly — this is BRICS farmers actually
+   being able to use the tool in their own language, not just an English
+   demo with a BRICS logo on it.
+
+7. **Close (20s)** — Roadmap: real BRICS-regional training data via the
+   federation API (current crop model is real but generically-sourced),
+   localizing backend-generated content (crop names, advisory rationale) to
+   match the UI, SMS/WhatsApp delivery for low-connectivity areas.
