@@ -6,6 +6,13 @@ import {
   registerFederationNode,
   submitFederationInsight,
 } from "../api";
+import {
+  ActivityIcon,
+  GlobeIcon,
+  LoaderIcon,
+  ServerIcon,
+  SparklesIcon,
+} from "./Icons";
 
 const BRICS_SEED = [
   { node_id: "in-mh-01", country: "India", region: "Maharashtra" },
@@ -126,200 +133,270 @@ export default function CooperationPanel() {
 
   return (
     <div className="cooperation-layout">
+      {/* 1. BRICS Cooperation Network Box (Same size as AgriNexus Header Box) */}
       <div className="card">
-        <h2>BRICS cooperation network</h2>
-        <p className="muted small">
-          Each participating region runs its own AgriNexus node and publishes only aggregated,
-          anonymized soil-health and regenerative-practice signals here &mdash; the shared,
-          interoperable "digital public good" layer called for by the AgriN brief, without any
-          individual farmer data crossing borders.
-        </p>
+        <div className="card-header">
+          <h2>
+            <GlobeIcon width="20" height="20" />
+            BRICS cooperation network
+          </h2>
+          <p className="card-desc">
+            Each participating region runs its own AgriNexus node and publishes only aggregated,
+            anonymized soil-health and regenerative-practice signals here &mdash; the shared,
+            interoperable "digital public good" layer called for by the AgriN brief, without any
+            individual farmer data crossing borders.
+          </p>
+        </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" style={{ marginBottom: "14px" }}>{error}</p>}
 
         {stats && (
-          <div className="stat-grid">
-            <div>
-              <span className="stat-value">{stats.registered_nodes}</span>
+          <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: "20px" }}>
+            <div className="stat-widget">
+              <span className="stat-widget-icon"><ServerIcon width="16" height="16" /></span>
               <span className="stat-label">Registered nodes</span>
+              <span className="stat-value">{stats.registered_nodes}</span>
             </div>
-            <div>
-              <span className="stat-value">{stats.participating_countries.length}</span>
+            <div className="stat-widget">
+              <span className="stat-widget-icon"><GlobeIcon width="16" height="16" /></span>
               <span className="stat-label">Countries</span>
+              <span className="stat-value">{stats.participating_countries.length}</span>
             </div>
-            <div>
-              <span className="stat-value">{stats.total_insights_shared}</span>
+            <div className="stat-widget">
+              <span className="stat-widget-icon"><ActivityIcon width="16" height="16" /></span>
               <span className="stat-label">Insights shared</span>
+              <span className="stat-value">{stats.total_insights_shared}</span>
             </div>
           </div>
         )}
 
-        <button className="primary" onClick={seedDemoNetwork} disabled={busy}>
-          {busy ? "Syncing..." : "Simulate BRICS network sync (demo)"}
+        <button className="primary" onClick={seedDemoNetwork} disabled={busy} style={{ marginBottom: "16px" }}>
+          {busy ? (
+            <>
+              <LoaderIcon width="16" height="16" />
+              <span>Syncing network data...</span>
+            </>
+          ) : (
+            <>
+              <SparklesIcon width="16" height="16" />
+              <span>Simulate BRICS network sync (demo)</span>
+            </>
+          )}
         </button>
 
         {insights.length > 0 ? (
-          <table className="insight-table">
-            <thead>
-              <tr>
-                <th>Country</th>
-                <th>Region</th>
-                <th>Crop</th>
-                <th>Soil score</th>
-                <th>Leading practice</th>
-                <th>Sample</th>
-              </tr>
-            </thead>
-            <tbody>
-              {insights.map((i, idx) => (
-                <tr key={idx}>
-                  <td>{i.country}</td>
-                  <td>{i.region}</td>
-                  <td>{i.crop}</td>
-                  <td>{i.avg_soil_health_score}</td>
-                  <td>{i.dominant_regenerative_practice}</td>
-                  <td>{i.sample_size}</td>
+          <div className="table-wrapper">
+            <table className="insight-table">
+              <thead>
+                <tr>
+                  <th>Country</th>
+                  <th>Region</th>
+                  <th>Crop</th>
+                  <th>Soil score</th>
+                  <th>Leading practice</th>
+                  <th>Sample</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {insights.map((i, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600 }}>{i.country}</td>
+                    <td>{i.region}</td>
+                    <td style={{ textTransform: "capitalize" }}>{i.crop}</td>
+                    <td>
+                      <span className="badge" style={{ background: "var(--primary-light)", color: "var(--primary)", border: "1px solid var(--panel-border)" }}>
+                        {i.avg_soil_health_score}
+                      </span>
+                    </td>
+                    <td>{i.dominant_regenerative_practice}</td>
+                    <td>{i.sample_size}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <p className="muted small">No insights shared yet. Try the demo sync above.</p>
+          <div className="empty-state-card" style={{ padding: "32px 16px" }}>
+            <p className="muted small">No insights shared yet. Try the demo sync above.</p>
+          </div>
         )}
       </div>
 
-      <div className="card">
-        <h2>Register a node</h2>
-        <p className="muted small">Add your own regional node to the network manually.</p>
-        <form onSubmit={submitNode}>
-          <label className="field">
-            <span>Node ID</span>
-            <input
-              required
-              value={nodeForm.node_id}
-              onChange={(e) => setNodeForm((f) => ({ ...f, node_id: e.target.value }))}
-              placeholder="e.g. in-mh-01"
-            />
-          </label>
-          <label className="field">
-            <span>Country</span>
-            <input
-              required
-              value={nodeForm.country}
-              onChange={(e) => setNodeForm((f) => ({ ...f, country: e.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Region</span>
-            <input
-              required
-              value={nodeForm.region}
-              onChange={(e) => setNodeForm((f) => ({ ...f, region: e.target.value }))}
-            />
-          </label>
-          <button type="submit" className="primary" disabled={nodeSubmitting}>
-            {nodeSubmitting ? "Registering..." : "Register node"}
-          </button>
-        </form>
-
-        <h2>Publish an insight</h2>
-        <p className="muted small">Share an aggregated regional signal.</p>
-        <form onSubmit={submitInsight}>
-          <label className="field">
-            <span>Node ID</span>
-            <input
-              required
-              value={insightForm.node_id}
-              onChange={(e) => setInsightForm((f) => ({ ...f, node_id: e.target.value }))}
-            />
-          </label>
-          <div className="grid-2">
-            <label className="field">
-              <span>Country</span>
-              <input
-                required
-                value={insightForm.country}
-                onChange={(e) => setInsightForm((f) => ({ ...f, country: e.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>Region</span>
-              <input
-                required
-                value={insightForm.region}
-                onChange={(e) => setInsightForm((f) => ({ ...f, region: e.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>Crop</span>
-              <input
-                required
-                value={insightForm.crop}
-                onChange={(e) => setInsightForm((f) => ({ ...f, crop: e.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>Avg soil health score</span>
-              <input
-                required
-                type="number"
-                step="any"
-                min="0"
-                max="100"
-                value={insightForm.avg_soil_health_score}
-                onChange={(e) =>
-                  setInsightForm((f) => ({ ...f, avg_soil_health_score: e.target.value }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>Leading practice</span>
-              <input
-                required
-                value={insightForm.dominant_regenerative_practice}
-                onChange={(e) =>
-                  setInsightForm((f) => ({ ...f, dominant_regenerative_practice: e.target.value }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>Sample size</span>
-              <input
-                required
-                type="number"
-                min="1"
-                value={insightForm.sample_size}
-                onChange={(e) => setInsightForm((f) => ({ ...f, sample_size: e.target.value }))}
-              />
-            </label>
+      {/* 2. Register a Node & Publish an Insight in ONE LINE as SEPARATE BOXES */}
+      <div className="cooperation-forms-row">
+        <div className="card">
+          <div className="card-header">
+            <h2>
+              <ServerIcon width="18" height="18" />
+              Register a node
+            </h2>
+            <p className="card-desc">Add your own regional node to the network manually.</p>
           </div>
-          <button type="submit" className="primary" disabled={insightSubmitting}>
-            {insightSubmitting ? "Publishing..." : "Publish insight"}
-          </button>
-        </form>
+          <form onSubmit={submitNode} className="cooperation-form-flex">
+            <div>
+              <label className="field">
+                <span>Node ID</span>
+                <input
+                  required
+                  value={nodeForm.node_id}
+                  onChange={(e) => setNodeForm((f) => ({ ...f, node_id: e.target.value }))}
+                  placeholder="e.g. in-mh-01"
+                />
+              </label>
+              <div className="grid-2">
+                <label className="field">
+                  <span>Country</span>
+                  <input
+                    required
+                    value={nodeForm.country}
+                    onChange={(e) => setNodeForm((f) => ({ ...f, country: e.target.value }))}
+                    placeholder="e.g. India"
+                  />
+                </label>
+                <label className="field">
+                  <span>Region</span>
+                  <input
+                    required
+                    value={nodeForm.region}
+                    onChange={(e) => setNodeForm((f) => ({ ...f, region: e.target.value }))}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </label>
+              </div>
+            </div>
+            <button type="submit" className="primary" disabled={nodeSubmitting} style={{ marginTop: "16px" }}>
+              {nodeSubmitting ? "Registering..." : "Register node"}
+            </button>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h2>
+              <ActivityIcon width="18" height="18" />
+              Publish an insight
+            </h2>
+            <p className="card-desc">Share an aggregated regional signal with partner nations.</p>
+          </div>
+          <form onSubmit={submitInsight} className="cooperation-form-flex">
+            <div>
+              <label className="field">
+                <span>Node ID</span>
+                <input
+                  required
+                  value={insightForm.node_id}
+                  onChange={(e) => setInsightForm((f) => ({ ...f, node_id: e.target.value }))}
+                  placeholder="e.g. in-mh-01"
+                />
+              </label>
+              <div className="grid-2">
+                <label className="field">
+                  <span>Country</span>
+                  <input
+                    required
+                    value={insightForm.country}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, country: e.target.value }))}
+                    placeholder="e.g. India"
+                  />
+                </label>
+                <label className="field">
+                  <span>Region</span>
+                  <input
+                    required
+                    value={insightForm.region}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, region: e.target.value }))}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </label>
+              </div>
+              <div className="grid-2">
+                <label className="field">
+                  <span>Crop</span>
+                  <input
+                    required
+                    value={insightForm.crop}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, crop: e.target.value }))}
+                    placeholder="e.g. cotton"
+                  />
+                </label>
+                <label className="field">
+                  <span>Avg soil health score</span>
+                  <input
+                    required
+                    type="number"
+                    step="any"
+                    min="0"
+                    max="100"
+                    value={insightForm.avg_soil_health_score}
+                    onChange={(e) =>
+                      setInsightForm((f) => ({ ...f, avg_soil_health_score: e.target.value }))
+                    }
+                    placeholder="e.g. 75"
+                  />
+                </label>
+              </div>
+              <div className="grid-2">
+                <label className="field">
+                  <span>Leading practice</span>
+                  <input
+                    required
+                    value={insightForm.dominant_regenerative_practice}
+                    onChange={(e) =>
+                      setInsightForm((f) => ({ ...f, dominant_regenerative_practice: e.target.value }))
+                    }
+                    placeholder="e.g. legume rotation"
+                  />
+                </label>
+                <label className="field">
+                  <span>Sample size</span>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    value={insightForm.sample_size}
+                    onChange={(e) => setInsightForm((f) => ({ ...f, sample_size: e.target.value }))}
+                    placeholder="e.g. 120"
+                  />
+                </label>
+              </div>
+            </div>
+            <button type="submit" className="primary" disabled={insightSubmitting} style={{ marginTop: "16px" }}>
+              {insightSubmitting ? "Publishing..." : "Publish insight"}
+            </button>
+          </form>
+        </div>
       </div>
 
+      {/* 3. Registered Nodes List Box (Same size as AgriNexus Header Box) */}
       {nodes.length > 0 && (
-        <div className="card span-2">
-          <h2>Registered nodes ({nodes.length})</h2>
-          <table className="insight-table">
-            <thead>
-              <tr>
-                <th>Node ID</th>
-                <th>Country</th>
-                <th>Region</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map((n) => (
-                <tr key={n.node_id}>
-                  <td>{n.node_id}</td>
-                  <td>{n.country}</td>
-                  <td>{n.region}</td>
+        <div className="card">
+          <div className="card-header">
+            <h2>
+              <ServerIcon width="18" height="18" />
+              Registered nodes ({nodes.length})
+            </h2>
+            <p className="card-desc">Active participating national and regional nodes.</p>
+          </div>
+          <div className="table-wrapper">
+            <table className="insight-table">
+              <thead>
+                <tr>
+                  <th>Node ID</th>
+                  <th>Country</th>
+                  <th>Region</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {nodes.map((n) => (
+                  <tr key={n.node_id}>
+                    <td style={{ fontWeight: 600, fontFamily: "monospace" }}>{n.node_id}</td>
+                    <td>{n.country}</td>
+                    <td>{n.region}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

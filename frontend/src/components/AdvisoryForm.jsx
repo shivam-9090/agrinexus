@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { geocodePlace } from "../api";
+import { MapPinIcon, SearchIcon, SproutIcon, LoaderIcon } from "./Icons";
 
 const DEFAULTS = {
   place_name: "Nagpur, India",
@@ -142,33 +143,45 @@ export default function AdvisoryForm({ onSubmit, loading }) {
 
   return (
     <form className="card form-card" onSubmit={submit} noValidate>
-      <h2>Farm details</h2>
+      <div className="card-header">
+        <h2>
+          <SproutIcon width="20" height="20" />
+          Farm details
+        </h2>
+        <p className="card-desc">
+          Geocode your farm coordinates and input laboratory soil test parameters.
+        </p>
+      </div>
 
-      <label className="field">
+      <label className="field" style={{ position: "relative" }}>
         <span>Search location</span>
-        <div className="search-row">
+        <div className="search-input-group">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="e.g. Nagpur, India"
           />
-          <button type="button" onClick={handleSearch} disabled={searching}>
-            {searching ? "..." : "Search"}
+          <button type="button" className="btn-outline" onClick={handleSearch} disabled={searching}>
+            {searching ? <LoaderIcon width="14" height="14" /> : <SearchIcon width="14" height="14" />}
+            Search
           </button>
           <button
             type="button"
+            className="btn-outline btn-icon"
             onClick={useMyLocation}
             disabled={locating}
             title="Use my current location"
+            aria-label="Use my current location"
           >
-            {locating ? "..." : "📍"}
+            {locating ? <LoaderIcon width="14" height="14" /> : <MapPinIcon width="15" height="15" />}
           </button>
         </div>
         {suggestions.length > 0 && (
           <ul className="suggestions">
             {suggestions.map((s) => (
               <li key={`${s.latitude}-${s.longitude}`} onClick={() => pickSuggestion(s)}>
-                {s.name}{s.admin1 ? `, ${s.admin1}` : ""}{s.country ? `, ${s.country}` : ""}
+                <MapPinIcon width="14" height="14" style={{ color: "var(--primary)", flexShrink: 0 }} />
+                <span>{s.name}{s.admin1 ? `, ${s.admin1}` : ""}{s.country ? `, ${s.country}` : ""}</span>
               </li>
             ))}
           </ul>
@@ -176,7 +189,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
         {locateError && <span className="field-error">{locateError}</span>}
       </label>
 
-      <div className="grid-2">
+      <div className="grid-4">
         <label className="field">
           <span>Place name</span>
           <input value={form.place_name} onChange={update("place_name")} />
@@ -210,7 +223,7 @@ export default function AdvisoryForm({ onSubmit, loading }) {
       </div>
 
       <h3>Soil test (kg/ha, pH)</h3>
-      <div className="grid-2">
+      <div className="grid-3">
         <label className="field">
           <span>Nitrogen (N)</span>
           <input
@@ -268,14 +281,28 @@ export default function AdvisoryForm({ onSubmit, loading }) {
             <span className="field-error">{errors.organic_carbon_pct}</span>
           )}
         </label>
-        <label className="field checkbox-field">
-          <input type="checkbox" checked={form.irrigation_available} onChange={update("irrigation_available")} />
+        <label className="field checkbox-field" style={{ alignSelf: "center", paddingTop: "14px" }}>
+          <input
+            type="checkbox"
+            checked={form.irrigation_available}
+            onChange={update("irrigation_available")}
+          />
           <span>Irrigation available</span>
         </label>
       </div>
 
-      <button type="submit" className="primary" disabled={loading}>
-        {loading ? "Fetching advisory..." : "Get regenerative advisory"}
+      <button type="submit" className="primary" disabled={loading} style={{ marginTop: "14px" }}>
+        {loading ? (
+          <>
+            <LoaderIcon width="16" height="16" />
+            <span>Fetching advisory...</span>
+          </>
+        ) : (
+          <>
+            <SproutIcon width="16" height="16" />
+            <span>Get regenerative advisory</span>
+          </>
+        )}
       </button>
     </form>
   );
